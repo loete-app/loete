@@ -6,14 +6,14 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
   imports: [RouterLink, RouterLinkActive],
   template: `
     <nav class="navbar">
-      <a routerLink="/" class="brand">Sample App</a>
+      <a routerLink="/" class="brand">Löte</a>
       <div class="links">
         <a
           routerLink="/"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
         >
-          Items
+          Events
         </a>
       </div>
     </nav>
