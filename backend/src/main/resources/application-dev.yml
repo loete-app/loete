@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    show-sql: false
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    ch.loete: DEBUG

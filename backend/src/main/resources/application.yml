@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: loete-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/loete}
+    username: ${DATABASE_USERNAME:loete}
+    password: ${DATABASE_PASSWORD:loete}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  docker:
+    compose:
+      file: ../compose.yaml
+      lifecycle-management: start-only
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
