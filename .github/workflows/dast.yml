@@ -1,0 +1,64 @@
+name: DAST (OWASP ZAP baseline)
+
+on:
+  schedule:
+    # Nightly 03:00 UTC (05:00 CEST)
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Override target URL (defaults to the deployed frontend)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    env:
+      REGION: europe-west1
+      FRONTEND_SERVICE: loete-frontend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Resolve target URL
+        id: target
+        env:
+          OVERRIDE: ${{ inputs.target_url }}
+        run: |
+          if [ -n "$OVERRIDE" ]; then
+            echo "url=$OVERRIDE" >> "$GITHUB_OUTPUT"
+          else
+            URL=$(gcloud run services describe "$FRONTEND_SERVICE" --region "$REGION" --format 'value(status.url)')
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Warm up target
+        env:
+          TARGET: ${{ steps.target.outputs.url }}
+        run: |
+          for i in 1 2 3; do
+            curl -sSf -o /dev/null "$TARGET" && break
+            sleep 5
+          done
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: ${{ steps.target.outputs.url }}
+          allow_issue_writing: false
+          cmd_options: "-a"
+          fail_action: false
+          artifact_name: zap-baseline-${{ github.run_id }}
