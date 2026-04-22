@@ -48,9 +48,9 @@ public class TicketmasterClient {
   private static final int PAGE_SIZE = 200;
 
   /**
-   * Fetches events from Ticketmaster within the given UTC window, up to {@code maxResults}.
-   * Pages through results (size=200, the API max). Returns whatever it managed to fetch — failures
-   * on a single page are logged and the partial result is returned.
+   * Fetches events from Ticketmaster within the given UTC window, up to {@code maxResults}. Pages
+   * through results (size=200, the API max). Returns whatever it managed to fetch — failures on a
+   * single page are logged and the partial result is returned.
    */
   public List<TicketmasterEvent> fetchUpcomingEvents(
       Instant startDateTime, Instant endDateTime, int maxResults) {
@@ -61,8 +61,7 @@ public class TicketmasterClient {
 
     String start =
         DateTimeFormatter.ISO_INSTANT.format(startDateTime.truncatedTo(ChronoUnit.SECONDS));
-    String end =
-        DateTimeFormatter.ISO_INSTANT.format(endDateTime.truncatedTo(ChronoUnit.SECONDS));
+    String end = DateTimeFormatter.ISO_INSTANT.format(endDateTime.truncatedTo(ChronoUnit.SECONDS));
 
     List<TicketmasterEvent> all = new ArrayList<>();
     int page = 0;
