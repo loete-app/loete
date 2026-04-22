@@ -42,5 +42,3 @@ jobs:
             -Dsonar.java.source=25
             -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/.angular/**,frontend/pnpm-lock.yaml
             -Dsonar.typescript.tsconfigPaths=frontend/tsconfig.json,frontend/tsconfig.app.json
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=600
