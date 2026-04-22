@@ -197,7 +197,7 @@ jobs:
     env:
       CLOUD_SQL_INSTANCE: loete-db
       CLOUD_SQL_PROXY_VERSION: "2.15.2"
-      FLYWAY_VERSION: "11.0.1"
+      FLYWAY_VERSION: "12.4.0"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -563,8 +563,11 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Docker login to Artifact Registry
+        run: |
+          gcloud auth print-access-token \
+            | docker login "https://${REGION}-docker.pkg.dev" \
+                --username=oauth2accesstoken --password-stdin
 
       - name: Resolve image refs
         id: refs
