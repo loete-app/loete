@@ -148,3 +148,35 @@ install-backend:
 # Install all dependencies
 [group('install')]
 install: install-frontend install-backend
+
+# ── Infra (OpenTofu) ─────────────────────────────────────────────────
+
+# Initialize Tofu backend & providers
+[group('infra')]
+infra-init:
+    cd infra && tofu init
+
+# Check Tofu formatting
+[group('infra')]
+infra-fmt-check:
+    cd infra && tofu fmt -check -recursive
+
+# Format Tofu files
+[group('infra')]
+infra-fmt:
+    cd infra && tofu fmt -recursive
+
+# Validate Tofu configuration
+[group('infra')]
+infra-validate:
+    cd infra && tofu validate
+
+# Plan infra changes against production.tfvars
+[group('infra')]
+infra-plan:
+    cd infra && tofu plan -var-file=production.tfvars
+
+# Apply infra changes (requires confirmation)
+[group('infra')]
+infra-apply:
+    cd infra && tofu apply -var-file=production.tfvars
