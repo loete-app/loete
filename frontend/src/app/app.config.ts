@@ -8,10 +8,6 @@ import {
   withInterceptors,
   withFetch,
 } from "@angular/common/http";
-import {
-  provideClientHydration,
-  withEventReplay,
-} from "@angular/platform-browser";
 
 import { routes } from "./app.routes";
 import { authInterceptor } from "./core/interceptors/auth.interceptor";
@@ -25,6 +21,5 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([clientIdInterceptor, authInterceptor]),
       withFetch(),
     ),
-    provideClientHydration(withEventReplay()),
   ],
 };
