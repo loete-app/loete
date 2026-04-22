@@ -1,0 +1,58 @@
+name: Infra (OpenTofu)
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "check (fmt+validate+plan) or apply"
+        required: true
+        type: string
+    secrets:
+      GCP_WIF_PROVIDER:
+        required: true
+      GCP_SA_EMAIL:
+        required: true
+
+jobs:
+  tofu:
+    name: Tofu ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: opentofu/setup-opentofu@fc711fa910b93cba0f3fbecaafc9f42fd0c411cb # v2.0.0
+        with:
+          tofu_version: "1.10"
+
+      - name: Tofu init
+        working-directory: infra
+        run: tofu init
+
+      - name: Tofu fmt check
+        if: inputs.mode == 'check'
+        working-directory: infra
+        run: tofu fmt -check -recursive
+
+      - name: Tofu validate
+        if: inputs.mode == 'check'
+        working-directory: infra
+        run: tofu validate
+
+      - name: Tofu plan
+        if: inputs.mode == 'check' && github.event_name == 'pull_request'
+        working-directory: infra
+        run: tofu plan -var-file=production.tfvars
+
+      - name: Tofu apply
+        if: inputs.mode == 'apply'
+        working-directory: infra
+        run: tofu apply -auto-approve -var-file=production.tfvars

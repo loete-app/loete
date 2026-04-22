@@ -1,0 +1,139 @@
+name: Security (built images)
+
+on:
+  workflow_call:
+    inputs:
+      region:
+        required: true
+        type: string
+      ar_repo:
+        required: true
+        type: string
+    secrets:
+      GCP_WIF_PROVIDER:
+        required: true
+      GCP_SA_EMAIL:
+        required: true
+      GCP_PROJECT_ID:
+        required: true
+
+jobs:
+  containers:
+    name: Container scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    env:
+      REGION: ${{ inputs.region }}
+      AR_REPO: ${{ inputs.ar_repo }}
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Resolve image ref
+        id: img
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          COMPONENT: ${{ matrix.component }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          REF="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${COMPONENT}:${COMMIT_SHA}"
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.img.outputs.ref }}
+          format: sarif
+          output: trivy-${{ matrix.component }}.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
+      - uses: github/codeql-action/upload-sarif@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.component }}.sarif
+          category: trivy-${{ matrix.component }}
+
+  supply-chain:
+    name: SBOM + sign + provenance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    env:
+      REGION: ${{ inputs.region }}
+      AR_REPO: ${{ inputs.ar_repo }}
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Docker login to Artifact Registry
+        run: |
+          gcloud auth print-access-token \
+            | docker login "https://${REGION}-docker.pkg.dev" \
+                --username=oauth2accesstoken --password-stdin
+
+      - name: Resolve image refs
+        id: refs
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          COMPONENT: ${{ matrix.component }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${COMPONENT}"
+          DIGEST=$(gcloud artifacts docker images describe \
+            "${IMAGE}:${COMMIT_SHA}" \
+            --format='value(image_summary.digest)')
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "ref=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SBOM (syft)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ steps.refs.outputs.ref }}
+          format: spdx-json
+          artifact-name: sbom-${{ matrix.component }}-${{ github.sha }}.spdx.json
+          upload-artifact: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Cosign keyless sign
+        env:
+          IMAGE_REF: ${{ steps.refs.outputs.ref }}
+        run: cosign sign --yes "$IMAGE_REF"
+
+      - name: Attest SLSA build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ steps.refs.outputs.image }}
+          subject-digest: ${{ steps.refs.outputs.digest }}
+          push-to-registry: true

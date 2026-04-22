@@ -1,0 +1,95 @@
+name: Build & push images
+
+on:
+  workflow_call:
+    inputs:
+      region:
+        required: true
+        type: string
+      ar_repo:
+        required: true
+        type: string
+      backend_service:
+        required: true
+        type: string
+    secrets:
+      GCP_WIF_PROVIDER:
+        required: true
+      GCP_SA_EMAIL:
+        required: true
+      GCP_PROJECT_ID:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REGION: ${{ inputs.region }}
+      AR_REPO: ${{ inputs.ar_repo }}
+      BACKEND_SERVICE: ${{ inputs.backend_service }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Resolve backend Cloud Run URL
+        id: backend-url
+        env:
+          SERVICE: ${{ env.BACKEND_SERVICE }}
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" \
+            --region "$REGION" \
+            --format 'value(status.url)' \
+            2>/dev/null || echo "")
+          if [ -z "$URL" ]; then
+            echo "Backend service does not yet exist; building frontend with placeholder API_URL."
+            echo "url=http://localhost:8080/api" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=${URL}/api" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push backend image
+        id: backend-image
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+        working-directory: backend
+        run: |
+          IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/backend"
+          docker build \
+            -t "${IMAGE_BASE}:${COMMIT_SHA}" \
+            -t "${IMAGE_BASE}:latest" .
+          docker push --all-tags "${IMAGE_BASE}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${COMMIT_SHA}" | cut -d'@' -f2)
+          echo "image=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push frontend image
+        id: frontend-image
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+          API_URL: ${{ steps.backend-url.outputs.url }}
+        working-directory: frontend
+        run: |
+          IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/frontend"
+          docker build \
+            --build-arg "API_URL=${API_URL}" \
+            -t "${IMAGE_BASE}:${COMMIT_SHA}" \
+            -t "${IMAGE_BASE}:latest" .
+          docker push --all-tags "${IMAGE_BASE}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${COMMIT_SHA}" | cut -d'@' -f2)
+          echo "image=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
