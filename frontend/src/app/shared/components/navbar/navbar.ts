@@ -1,9 +1,10 @@
 import { Component } from "@angular/core";
 import { RouterLink, RouterLinkActive } from "@angular/router";
+import { LucideAngularModule, Heart } from "lucide-angular";
 
 @Component({
   selector: "app-navbar",
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, LucideAngularModule],
   template: `
     <nav class="navbar">
       <a routerLink="/" class="brand">Löte</a>
@@ -14,6 +15,10 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
           [routerLinkActiveOptions]="{ exact: true }"
         >
           Events
+        </a>
+        <a routerLink="/favoriten" routerLinkActive="active" class="fav-link">
+          <i-lucide [img]="HeartIcon" [size]="14" />
+          Favoriten
         </a>
       </div>
     </nav>
@@ -44,10 +49,17 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
       font-size: 0.875rem;
       transition: color 0.15s;
     }
+    .fav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
     .links a:hover,
     .links a.active {
       color: var(--foreground);
     }
   `,
 })
-export class Navbar {}
+export class Navbar {
+  readonly HeartIcon = Heart;
+}
