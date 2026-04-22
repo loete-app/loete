@@ -368,6 +368,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -416,16 +417,23 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read
     steps:
-      - uses: google/osv-scanner-action/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
-        with:
-          scan-args: |-
-            --recursive
-            --lockfile=frontend/pnpm-lock.yaml
-            --lockfile=backend/pom.xml
-            --format=sarif
-            --output=osv-results.sarif
-        continue-on-error: true
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run OSV-Scanner
+        run: |
+          curl -sSfL -o osv-scanner \
+            https://github.com/google/osv-scanner/releases/download/v2.3.5/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          ./osv-scanner \
+            --recursive \
+            --lockfile=frontend/pnpm-lock.yaml \
+            --lockfile=backend/pom.xml \
+            --format=sarif \
+            --output=osv-results.sarif \
+            . || true
+          ls -la osv-results.sarif
 
       - uses: github/codeql-action/upload-sarif@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
         if: always()
@@ -439,6 +447,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -459,6 +468,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -489,6 +499,7 @@ jobs:
       contents: read
       id-token: write
       security-events: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -505,10 +516,20 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
+      - name: Resolve image ref
+        id: img
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          COMPONENT: ${{ matrix.component }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          REF="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${COMPONENT}:${COMMIT_SHA}"
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+
       - name: Trivy scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ matrix.component == 'backend' && needs.build-push.outputs.backend_image || needs.build-push.outputs.frontend_image }}:${{ github.sha }}
+          image-ref: ${{ steps.img.outputs.ref }}
           format: sarif
           output: trivy-${{ matrix.component }}.sarif
           severity: CRITICAL,HIGH
@@ -547,9 +568,14 @@ jobs:
       - name: Resolve image refs
         id: refs
         env:
-          IMAGE: ${{ matrix.component == 'backend' && needs.build-push.outputs.backend_image || needs.build-push.outputs.frontend_image }}
-          DIGEST: ${{ matrix.component == 'backend' && needs.build-push.outputs.backend_digest || needs.build-push.outputs.frontend_digest }}
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          COMPONENT: ${{ matrix.component }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${COMPONENT}"
+          DIGEST=$(gcloud artifacts docker images describe \
+            "${IMAGE}:${COMMIT_SHA}" \
+            --format='value(image_summary.digest)')
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
           echo "ref=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
