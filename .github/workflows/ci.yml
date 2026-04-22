@@ -10,6 +10,16 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+# Reusable workflows can only request permissions the caller already has.
+# Grant the union here; each reusable workflow narrows it to what it actually needs.
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
+  security-events: write
+  actions: read
+  attestations: write
+
 jobs:
   # ── Quality gates ────────────────────────────────────────────────────
   frontend:
