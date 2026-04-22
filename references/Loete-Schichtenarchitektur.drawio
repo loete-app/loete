@@ -1,0 +1,260 @@
+<mxfile host="app.diagrams.net" modified="2026-03-11T10:00:00.000Z" agent="Claude" version="24.0.0" type="device">
+  <diagram id="loete-layered-arch" name="Schichtenarchitektur">
+    <mxGraphModel dx="1422" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ============ TITLE ============ -->
+        <mxCell id="title" value="Löte – Schichtenarchitektur" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=22;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="500" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LAYER 1: PRÄSENTATIONSSCHICHT ============ -->
+        <mxCell id="layer1" value="&lt;b&gt;Präsentationsschicht&lt;/b&gt; (Angular + TypeScript)" style="shape=folder;fontStyle=0;tabWidth=220;tabHeight=20;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;fillColor=#FFE6E6;strokeColor=#B85450;fontSize=13;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="1120" height="180" as="geometry"/>
+        </mxCell>
+
+        <!-- Package: Views / Components -->
+        <mxCell id="pkg_views" value="&lt;&lt;package&gt;&gt;&#xa;Components" style="shape=folder;fontStyle=0;tabWidth=100;tabHeight=18;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=center;spacingTop=2;fillColor=#FFFFFF;strokeColor=#B85450;fontSize=11;container=1;collapsible=0;" vertex="1" parent="layer1">
+          <mxGeometry x="20" y="40" width="460" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="comp_start" value="&lt;b&gt;StartseiteComponent&lt;/b&gt;&#xa;─────────────────&#xa;- events: Event[]&#xa;─────────────────&#xa;+ ngOnInit()&#xa;+ loadEvents()" style="shape=mxgraph.basic.rect;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="pkg_views">
+          <mxGeometry x="10" y="28" width="175" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="comp_detail" value="&lt;b&gt;EventDetailComponent&lt;/b&gt;&#xa;─────────────────&#xa;- event: Event&#xa;─────────────────&#xa;+ ngOnInit()&#xa;+ redirectToTicket()" style="shape=mxgraph.basic.rect;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="pkg_views">
+          <mxGeometry x="195" y="28" width="185" height="82" as="geometry"/>
+        </mxCell>
+
+        <!-- Package: Shared UI -->
+        <mxCell id="pkg_shared" value="&lt;&lt;package&gt;&gt;&#xa;Shared UI" style="shape=folder;fontStyle=0;tabWidth=90;tabHeight=18;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=center;spacingTop=2;fillColor=#FFFFFF;strokeColor=#B85450;fontSize=11;container=1;collapsible=0;" vertex="1" parent="layer1">
+          <mxGeometry x="500" y="40" width="600" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="comp_filter" value="&lt;b&gt;FilterComponent&lt;/b&gt;&#xa;─────────────────&#xa;- filterCriteria: FilterDTO&#xa;─────────────────&#xa;+ applyFilter()&#xa;+ resetFilter()" style="shape=mxgraph.basic.rect;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="pkg_shared">
+          <mxGeometry x="10" y="28" width="185" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="comp_fav" value="&lt;b&gt;FavoritenComponent&lt;/b&gt;&#xa;─────────────────&#xa;- favorites: Event[]&#xa;─────────────────&#xa;+ toggleFavorite()&#xa;+ loadFavorites()" style="shape=mxgraph.basic.rect;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="pkg_shared">
+          <mxGeometry x="205" y="28" width="185" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="comp_nav" value="&lt;b&gt;NavigationComponent&lt;/b&gt;&#xa;─────────────────&#xa;- routes: Route[]&#xa;─────────────────&#xa;+ navigate(path)" style="shape=mxgraph.basic.rect;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="pkg_shared">
+          <mxGeometry x="400" y="28" width="185" height="82" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LAYER 2: FRONTEND-SERVICE-SCHICHT ============ -->
+        <mxCell id="layer2" value="&lt;b&gt;Frontend-Service-Schicht&lt;/b&gt; (Angular Services)" style="shape=folder;fontStyle=0;tabWidth=240;tabHeight=20;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=13;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="290" width="1120" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_event_fe" value="&lt;b&gt;EventService&lt;/b&gt;&#xa;─────────────────&#xa;+ getEvents(): Observable&lt;Event[]&gt;&#xa;+ getEventById(id): Observable&lt;Event&gt;&#xa;+ searchEvents(filter): Observable&lt;Event[]&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#C62828;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer2">
+          <mxGeometry x="20" y="35" width="310" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_fav_fe" value="&lt;b&gt;FavoritesService&lt;/b&gt;&#xa;─────────────────&#xa;+ getFavorites(): Observable&lt;Event[]&gt;&#xa;+ addFavorite(eventId): Observable&lt;void&gt;&#xa;+ removeFavorite(eventId): Observable&lt;void&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#C62828;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer2">
+          <mxGeometry x="350" y="35" width="330" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_filter_fe" value="&lt;b&gt;FilterService&lt;/b&gt;&#xa;─────────────────&#xa;+ applyFilters(criteria): FilterDTO&#xa;+ getCategories(): Observable&lt;Category[]&gt;&#xa;+ getLocations(): Observable&lt;Location[]&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#C62828;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer2">
+          <mxGeometry x="700" y="35" width="320" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ INTERFACE: HTTP / REST ============ -->
+        <mxCell id="interface_http" value="&lt;b&gt;«interface» HTTP / REST API&lt;/b&gt;   (Angular HttpClient → Spring Boot REST)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EAF6;strokeColor=#3F51B5;fontSize=12;fontStyle=0;verticalAlign=middle;align=center;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="440" width="1120" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LAYER 3: API-SCHICHT (REST CONTROLLER) ============ -->
+        <mxCell id="layer3" value="&lt;b&gt;API-Schicht&lt;/b&gt; (REST Controller – Spring Boot)" style="shape=folder;fontStyle=0;tabWidth=260;tabHeight=20;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;fillColor=#DCEDC8;strokeColor=#558B2F;fontSize=13;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="490" width="1120" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="ctrl_event" value="&lt;b&gt;EventController&lt;/b&gt;&#xa;─────────────────&#xa;@RestController&#xa;─────────────────&#xa;+ getEvents(): List&lt;EventDTO&gt;&#xa;+ getEventById(id): EventDTO&#xa;+ searchEvents(filter): List&lt;EventDTO&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#558B2F;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer3">
+          <mxGeometry x="20" y="30" width="310" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ctrl_fav" value="&lt;b&gt;FavoritesController&lt;/b&gt;&#xa;─────────────────&#xa;@RestController&#xa;─────────────────&#xa;+ getFavorites(): List&lt;FavoriteDTO&gt;&#xa;+ addFavorite(eventId): void&#xa;+ removeFavorite(eventId): void" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#558B2F;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer3">
+          <mxGeometry x="400" y="30" width="310" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LAYER 4: GESCHÄFTSLOGIK-SCHICHT ============ -->
+        <mxCell id="layer4" value="&lt;b&gt;Geschäftslogik-Schicht&lt;/b&gt; (Business Logic – Spring Services)" style="shape=folder;fontStyle=0;tabWidth=310;tabHeight=20;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=13;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="640" width="1120" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_event_be" value="&lt;b&gt;EventService&lt;/b&gt;&#xa;─────────────────&#xa;@Service&#xa;─────────────────&#xa;+ aggregateEvents(): List&lt;Event&gt;&#xa;+ filterEvents(criteria): List&lt;Event&gt;&#xa;+ getEventById(id): Event" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#1565C0;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer4">
+          <mxGeometry x="20" y="35" width="310" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_fav_be" value="&lt;b&gt;FavoritesService&lt;/b&gt;&#xa;─────────────────&#xa;@Service&#xa;─────────────────&#xa;+ getFavorites(): List&lt;Favorite&gt;&#xa;+ addFavorite(eventId): Favorite&#xa;+ removeFavorite(eventId): void" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#1565C0;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer4">
+          <mxGeometry x="400" y="35" width="310" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_cache" value="&lt;b&gt;CacheService&lt;/b&gt;&#xa;─────────────────&#xa;@Service&#xa;─────────────────&#xa;+ getCachedEvents(): List&lt;Event&gt;&#xa;+ refreshCache(): void&#xa;+ isCacheValid(): boolean" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#1565C0;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer4">
+          <mxGeometry x="780" y="35" width="310" height="82" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LAYER 5: INTEGRATIONSSCHICHT ============ -->
+        <mxCell id="layer5" value="&lt;b&gt;Integrationsschicht&lt;/b&gt; (Externe API-Anbindung)" style="shape=folder;fontStyle=0;tabWidth=250;tabHeight=20;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=13;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="800" width="1120" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="client_tm" value="&lt;b&gt;TicketmasterClient&lt;/b&gt;&#xa;─────────────────&#xa;─────────────────&#xa;+ fetchEvents(params): List&lt;Event&gt;&#xa;+ mapToEventDTO(json): EventDTO&#xa;- apiKey: String" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#F9A825;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer5">
+          <mxGeometry x="20" y="30" width="310" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="client_future" value="&lt;b&gt;«interface» EventPlatformClient&lt;/b&gt;&#xa;─────────────────&#xa;─────────────────&#xa;+ fetchEvents(params): List&lt;Event&gt;&#xa;+ mapToEventDTO(json): EventDTO" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#F9A825;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;dashed=1;" vertex="1" parent="layer5">
+          <mxGeometry x="400" y="30" width="310" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- External API box -->
+        <mxCell id="ext_tm" value="&lt;b&gt;Ticketmaster&#xa;Discovery API&lt;/b&gt;&#xa;(5000 Calls/Tag)" style="shape=mxgraph.basic.rect;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;" vertex="1" parent="layer5">
+          <mxGeometry x="800" y="15" width="150" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext_future" value="&lt;i&gt;Weitere Plattformen&#xa;(zukünftig)&lt;/i&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;dashed=1;" vertex="1" parent="layer5">
+          <mxGeometry x="960" y="15" width="140" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow: Client -> External API -->
+        <mxCell id="arrow_tm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jetSize=auto;html=1;dashed=0;strokeColor=#F9A825;strokeWidth=1;endArrow=open;endSize=8;" edge="1" parent="layer5" source="client_tm" target="ext_tm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow_tm_label" value="REST API&#xa;(JSON)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=9;fontColor=#F9A825;" vertex="1" parent="layer5">
+          <mxGeometry x="680" y="35" width="70" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LAYER 6: PERSISTENZSCHICHT ============ -->
+        <mxCell id="layer6" value="&lt;b&gt;Persistenzschicht&lt;/b&gt; (JPA / Hibernate – Data Access)" style="shape=folder;fontStyle=0;tabWidth=280;tabHeight=20;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;fillColor=#E1BEE7;strokeColor=#7B1FA2;fontSize=13;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="940" width="1120" height="130" as="geometry"/>
+        </mxCell>
+
+        <!-- Repositories -->
+        <mxCell id="repo_event" value="&lt;b&gt;EventRepository&lt;/b&gt;&#xa;─────────────────&#xa;extends JpaRepository&#xa;─────────────────&#xa;+ findByCategory(cat): List&lt;Event&gt;&#xa;+ findByLocation(loc): List&lt;Event&gt;&#xa;+ findByDateRange(from, to): List&lt;Event&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer6">
+          <mxGeometry x="20" y="30" width="330" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="repo_fav" value="&lt;b&gt;FavoriteRepository&lt;/b&gt;&#xa;─────────────────&#xa;extends JpaRepository&#xa;─────────────────&#xa;+ findBySessionId(id): List&lt;Favorite&gt;&#xa;+ existsByEventId(eventId): boolean" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=10;fontFamily=Courier New;align=left;verticalAlign=top;spacingLeft=5;spacingTop=3;whiteSpace=wrap;" vertex="1" parent="layer6">
+          <mxGeometry x="400" y="30" width="310" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Entities package -->
+        <mxCell id="pkg_entities" value="&lt;&lt;package&gt;&gt; Entities" style="shape=folder;fontStyle=0;tabWidth=100;tabHeight=18;tabPosition=left;html=1;whiteSpace=wrap;verticalAlign=top;align=center;spacingTop=0;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=10;container=1;collapsible=0;" vertex="1" parent="layer6">
+          <mxGeometry x="780" y="30" width="310" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent_event" value="Event" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=10;fontFamily=Courier New;align=center;verticalAlign=middle;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="pkg_entities">
+          <mxGeometry x="10" y="25" width="65" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent_fav" value="Favorite" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=10;fontFamily=Courier New;align=center;verticalAlign=middle;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="pkg_entities">
+          <mxGeometry x="85" y="25" width="65" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent_cat" value="Category" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=10;fontFamily=Courier New;align=center;verticalAlign=middle;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="pkg_entities">
+          <mxGeometry x="160" y="25" width="65" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent_loc" value="Location" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=10;fontFamily=Courier New;align=center;verticalAlign=middle;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="pkg_entities">
+          <mxGeometry x="235" y="25" width="65" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="ent_note" value="@Entity JPA-Klassen" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=9;fontColor=#7B1FA2;fontStyle=2;" vertex="1" parent="pkg_entities">
+          <mxGeometry x="60" y="58" width="180" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ DATABASE ============ -->
+        <mxCell id="db" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&#xa;─────────────&#xa;events&#xa;favorites&#xa;categories&#xa;locations" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#E1BEE7;strokeColor=#7B1FA2;fontSize=11;fontFamily=Courier New;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="510" y="1100" width="160" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ DEPENDENCY ARROWS (between layers) ============ -->
+
+        <!-- Präsentation → Frontend Services -->
+        <mxCell id="dep1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=1;strokeColor=#999999;strokeWidth=1.5;endArrow=open;endSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="layer1" target="layer2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep1_label" value="«use»" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#999999;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="640" y="265" width="40" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Frontend Services → Interface -->
+        <mxCell id="dep2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=1;strokeColor=#3F51B5;strokeWidth=1.5;endArrow=open;endSize=10;" edge="1" parent="1" source="layer2" target="interface_http">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep2_label" value="HTTP/JSON" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#3F51B5;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="640" y="422" width="70" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Interface → API Schicht -->
+        <mxCell id="dep3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=1;strokeColor=#3F51B5;strokeWidth=1.5;endArrow=open;endSize=10;" edge="1" parent="1" source="interface_http" target="layer3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- API → Geschäftslogik -->
+        <mxCell id="dep4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=1;strokeColor=#999999;strokeWidth=1.5;endArrow=open;endSize=10;" edge="1" parent="1" source="layer3" target="layer4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep4_label" value="«use»" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#999999;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="640" y="615" width="40" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Geschäftslogik → Integration -->
+        <mxCell id="dep5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=1;strokeColor=#999999;strokeWidth=1.5;endArrow=open;endSize=10;" edge="1" parent="1" source="layer4" target="layer5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep5_label" value="«use»" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#999999;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="640" y="775" width="40" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Geschäftslogik → Persistenz -->
+        <mxCell id="dep6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=1;strokeColor=#999999;strokeWidth=1.5;endArrow=open;endSize=10;exitX=0.8;exitY=1;exitDx=0;exitDy=0;entryX=0.8;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="layer5" target="layer6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep6_label" value="«use»" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#999999;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="980" y="915" width="40" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Persistenz → DB -->
+        <mxCell id="dep7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;html=1;dashed=0;strokeColor=#7B1FA2;strokeWidth=2;endArrow=open;endSize=10;" edge="1" parent="1" source="layer6" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep7_label" value="JDBC" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#7B1FA2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="595" y="1080" width="40" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ LEGEND ============ -->
+        <mxCell id="legend_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#CCCCCC;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1100" width="340" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_title" value="&lt;b&gt;Legende&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=12;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="95" y="1102" width="100" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6E6;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="95" y="1128" width="18" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1t" value="Präsentationsschicht" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="118" y="1123" width="130" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DCEDC8;strokeColor=#558B2F;" vertex="1" parent="1">
+          <mxGeometry x="95" y="1148" width="18" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2t" value="API-Schicht (Controller)" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="118" y="1143" width="140" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="95" y="1168" width="18" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3t" value="Geschäftslogik-Schicht" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="118" y="1163" width="140" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;" vertex="1" parent="1">
+          <mxGeometry x="260" y="1128" width="18" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4t" value="Integrationsschicht" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="283" y="1123" width="120" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="260" y="1148" width="18" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg5t" value="Persistenzschicht" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="283" y="1143" width="120" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg6" value="- - -→" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="255" y="1163" width="30" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg6t" value="Abhängigkeit «use»" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="283" y="1163" width="120" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg7" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="95" y="1188" width="18" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg7t" value="Angular Components" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="118" y="1183" width="130" height="22" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

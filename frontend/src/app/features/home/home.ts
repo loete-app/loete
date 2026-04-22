@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { EventService } from "@/core/services/event.service";
 import { FavoriteService } from "@/core/services/favorite.service";
+import { SeoService } from "@/core/services/seo.service";
 import { Event, EventFilter } from "@/core/models/event.model";
 import { EventCard } from "@/shared/components/event-card/event-card";
 import {
@@ -167,6 +168,7 @@ export class Home implements OnInit {
   private favoriteService = inject(FavoriteService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private seo = inject(SeoService);
 
   readonly CalendarX2Icon = CalendarX2;
   readonly AlertIcon = AlertTriangle;
@@ -188,6 +190,10 @@ export class Home implements OnInit {
   };
 
   ngOnInit(): void {
+    this.seo.set(
+      "Events entdecken",
+      "Entdecke Konzerte, Festivals, Sport und mehr in der Schweiz – an einem Ort.",
+    );
     this.favoriteService.loadIds();
 
     const qp = this.route.snapshot.queryParamMap;

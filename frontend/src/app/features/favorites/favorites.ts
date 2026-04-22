@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { RouterLink } from "@angular/router";
 import { FavoriteService } from "@/core/services/favorite.service";
+import { SeoService } from "@/core/services/seo.service";
 import { Favorite } from "@/core/models/favorite.model";
 import {
   LucideAngularModule,
@@ -226,6 +227,7 @@ import {
 })
 export class Favorites implements OnInit {
   private favoriteService = inject(FavoriteService);
+  private seo = inject(SeoService);
 
   favorites = signal<Favorite[]>([]);
   loading = signal(true);
@@ -241,6 +243,7 @@ export class Favorites implements OnInit {
     "https://placehold.co/120x80/1a1a2e/e0e0e0?text=Kein+Bild";
 
   ngOnInit(): void {
+    this.seo.set("Meine Favoriten", "Deine gespeicherten Events auf Löte.");
     this.favoriteService.loadIds();
     this.load();
   }
