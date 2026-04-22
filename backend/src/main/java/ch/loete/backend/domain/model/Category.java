@@ -19,13 +19,13 @@ import lombok.NoArgsConstructor;
 @Table(name = "categories")
 public class Category {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String name;
+  @Column(unique = true, nullable = false)
+  private String name;
 
-    @Column(unique = true, nullable = false)
-    private String slug;
+  @Column(unique = true, nullable = false)
+  private String slug;
 }

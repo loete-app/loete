@@ -21,28 +21,28 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class EventController {
 
-    private final EventService eventService;
+  private final EventService eventService;
 
-    @GetMapping
-    public ResponseEntity<PagedResponse<EventResponse>> getEvents(
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String city,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                    LocalDateTime dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                    LocalDateTime dateTo,
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        EventFilterRequest filter =
-                new EventFilterRequest(categoryId, city, dateFrom, dateTo, search, page, size);
-        return ResponseEntity.ok(eventService.getEvents(filter));
-    }
+  @GetMapping
+  public ResponseEntity<PagedResponse<EventResponse>> getEvents(
+      @RequestParam(required = false) Long categoryId,
+      @RequestParam(required = false) String city,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateTo,
+      @RequestParam(required = false) String search,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    EventFilterRequest filter =
+        new EventFilterRequest(categoryId, city, dateFrom, dateTo, search, page, size);
+    return ResponseEntity.ok(eventService.getEvents(filter));
+  }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<EventDetailResponse> getEvent(
-            @PathVariable String id,
-            @RequestHeader(value = "X-Client-Id", required = false) String clientId) {
-        return ResponseEntity.ok(eventService.getEvent(id, clientId));
-    }
+  @GetMapping("/{id}")
+  public ResponseEntity<EventDetailResponse> getEvent(
+      @PathVariable String id,
+      @RequestHeader(value = "X-Client-Id", required = false) String clientId) {
+    return ResponseEntity.ok(eventService.getEvent(id, clientId));
+  }
 }

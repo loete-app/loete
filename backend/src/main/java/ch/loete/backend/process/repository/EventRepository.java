@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EventRepository
-        extends JpaRepository<Event, String>, JpaSpecificationExecutor<Event> {
+    extends JpaRepository<Event, String>, JpaSpecificationExecutor<Event> {
 
-    Optional<Event> findByExternalId(String externalId);
+  Optional<Event> findByExternalId(String externalId);
 }

@@ -10,12 +10,12 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface LocationRepository extends JpaRepository<Location, Long> {
 
-    Optional<Location> findByNameAndCity(String name, String city);
+  Optional<Location> findByNameAndCity(String name, String city);
 
-    @Query(
-            "SELECT DISTINCT l.city FROM Location l"
-                    + " WHERE l.city IS NOT NULL"
-                    + " AND EXISTS (SELECT 1 FROM Event e WHERE e.location = l)"
-                    + " ORDER BY l.city ASC")
-    List<String> findDistinctCitiesWithEvents();
+  @Query(
+      "SELECT DISTINCT l.city FROM Location l"
+          + " WHERE l.city IS NOT NULL"
+          + " AND EXISTS (SELECT 1 FROM Event e WHERE e.location = l)"
+          + " ORDER BY l.city ASC")
+  List<String> findDistinctCitiesWithEvents();
 }

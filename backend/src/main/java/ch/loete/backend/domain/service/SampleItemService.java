@@ -19,14 +19,29 @@ public class SampleItemService {
       new CopyOnWriteArrayList<>(
           List.of(
               new SampleItemResponse(
-                  "a1b2c3d4", "Wireless Keyboard", "Bluetooth, compact layout",
-                  ItemCategory.ELECTRONICS, Priority.MEDIUM, 49.90, Instant.now()),
+                  "a1b2c3d4",
+                  "Wireless Keyboard",
+                  "Bluetooth, compact layout",
+                  ItemCategory.ELECTRONICS,
+                  Priority.MEDIUM,
+                  49.90,
+                  Instant.now()),
               new SampleItemResponse(
-                  "e5f6g7h8", "Spring Boot in Action", "Manning Publications, 2nd edition",
-                  ItemCategory.BOOK, Priority.LOW, 39.00, Instant.now()),
+                  "e5f6g7h8",
+                  "Spring Boot in Action",
+                  "Manning Publications, 2nd edition",
+                  ItemCategory.BOOK,
+                  Priority.LOW,
+                  39.00,
+                  Instant.now()),
               new SampleItemResponse(
-                  "i9j0k1l2", "Winter Jacket", "Waterproof, size M",
-                  ItemCategory.CLOTHING, Priority.HIGH, 129.00, Instant.now())));
+                  "i9j0k1l2",
+                  "Winter Jacket",
+                  "Waterproof, size M",
+                  ItemCategory.CLOTHING,
+                  Priority.HIGH,
+                  129.00,
+                  Instant.now())));
 
   public List<SampleItemResponse> findAll(ItemCategory category, Priority priority) {
     return items.stream()
