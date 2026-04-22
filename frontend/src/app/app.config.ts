@@ -15,12 +15,16 @@ import {
 
 import { routes } from "./app.routes";
 import { authInterceptor } from "./core/interceptors/auth.interceptor";
+import { clientIdInterceptor } from "./core/interceptors/client-id.interceptor";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor]), withFetch()),
+    provideHttpClient(
+      withInterceptors([clientIdInterceptor, authInterceptor]),
+      withFetch(),
+    ),
     provideClientHydration(withEventReplay()),
   ],
 };
