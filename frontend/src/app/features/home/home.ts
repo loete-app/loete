@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { EventService } from "@/core/services/event.service";
+import { VibeSearchService } from "@/core/services/vibe-search.service";
 import { FavoriteService } from "@/core/services/favorite.service";
 import { SeoService } from "@/core/services/seo.service";
 import { Event, EventFilter } from "@/core/models/event.model";
@@ -19,12 +20,13 @@ import { LucideAngularModule, CalendarX2, AlertTriangle } from "lucide-angular";
       <section class="hero">
         <h1>Entdecke Events</h1>
         <p class="subtitle">
-          Finde Konzerte, Sport, Theater und mehr in deiner Nähe.
+          Finde Konzerte, Sport, Theater und mehr in deiner Nahe.
         </p>
       </section>
 
       <app-filter-bar
         [initial]="initialFilters()"
+        searchPlaceholder="Suche nach Vibe, Stimmung oder Eventname..."
         (filtersChange)="onFiltersChange($event)"
       />
 
@@ -43,7 +45,7 @@ import { LucideAngularModule, CalendarX2, AlertTriangle } from "lucide-angular";
         <div class="empty">
           <i-lucide [img]="CalendarX2Icon" [size]="48" class="empty-icon" />
           <h3>Keine Events gefunden</h3>
-          <p>Passe deine Filter an oder schau später nochmal vorbei.</p>
+          <p>Passe deine Filter an oder schau spater nochmal vorbei.</p>
         </div>
       } @else {
         <div class="grid">
@@ -56,7 +58,7 @@ import { LucideAngularModule, CalendarX2, AlertTriangle } from "lucide-angular";
           }
         </div>
 
-        @if (!lastPage()) {
+        @if (!isSearchActive() && !lastPage()) {
           <div class="load-more">
             <button (click)="loadMore()" [disabled]="loadingMore()">
               {{ loadingMore() ? "Laden..." : "Mehr Events laden" }}
@@ -165,6 +167,7 @@ import { LucideAngularModule, CalendarX2, AlertTriangle } from "lucide-angular";
 })
 export class Home implements OnInit {
   private eventService = inject(EventService);
+  private vibeSearchService = inject(VibeSearchService);
   private favoriteService = inject(FavoriteService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -192,7 +195,7 @@ export class Home implements OnInit {
   ngOnInit(): void {
     this.seo.set(
       "Events entdecken",
-      "Entdecke Konzerte, Festivals, Sport und mehr in der Schweiz – an einem Ort.",
+      "Entdecke Konzerte, Festivals, Sport und mehr in der Schweiz - an einem Ort.",
     );
     this.favoriteService.init();
 
@@ -214,6 +217,10 @@ export class Home implements OnInit {
     this.currentPage = 0;
     this.syncQueryParams();
     this.loadEvents();
+  }
+
+  isSearchActive(): boolean {
+    return !!this.filters.search;
   }
 
   loadMore(): void {
@@ -239,12 +246,48 @@ export class Home implements OnInit {
   private loadEvents(): void {
     this.loading.set(true);
     this.error.set(null);
+
+    if (this.filters.search) {
+      this.loadVibeResults();
+    } else {
+      this.loadBrowseResults();
+    }
+  }
+
+  private loadBrowseResults(): void {
     this.eventService
       .getEvents({ ...this.toApiFilter(), page: this.currentPage })
       .subscribe({
         next: (res) => {
           this.events.set(res.content);
           this.lastPage.set(res.last);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.events.set([]);
+          this.error.set(
+            "Wir konnten gerade keine Events laden. Bitte versuche es in wenigen Augenblicken erneut.",
+          );
+          this.loading.set(false);
+        },
+      });
+  }
+
+  private loadVibeResults(): void {
+    this.vibeSearchService
+      .search({
+        query: this.filters.search,
+        categoryId: this.filters.categoryId,
+        city: this.filters.city,
+        dateFrom: this.filters.dateFrom
+          ? `${this.filters.dateFrom}T00:00:00`
+          : null,
+        dateTo: this.filters.dateTo ? `${this.filters.dateTo}T23:59:59` : null,
+      })
+      .subscribe({
+        next: (res) => {
+          this.events.set(res.results);
+          this.lastPage.set(true);
           this.loading.set(false);
         },
         error: () => {

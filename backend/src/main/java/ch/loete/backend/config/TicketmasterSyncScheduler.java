@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ public class TicketmasterSyncScheduler implements ApplicationRunner {
 
   private final TicketmasterIntegrationService integrationService;
   private final EventRepository eventRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   /** Daily sync at 03:00 Europe/Zurich. */
   @Scheduled(cron = "0 0 3 * * *", zone = "Europe/Zurich")
@@ -25,6 +27,7 @@ public class TicketmasterSyncScheduler implements ApplicationRunner {
     log.info("Starting scheduled Ticketmaster sync");
     try {
       integrationService.syncUpcomingEvents();
+      eventPublisher.publishEvent(new TicketmasterSyncCompleteEvent(this));
     } catch (Exception e) {
       log.error("Scheduled Ticketmaster sync failed: {}", e.getMessage(), e);
     }
@@ -40,6 +43,7 @@ public class TicketmasterSyncScheduler implements ApplicationRunner {
     log.info("Events table empty, running initial Ticketmaster sync");
     try {
       integrationService.syncUpcomingEvents();
+      eventPublisher.publishEvent(new TicketmasterSyncCompleteEvent(this));
     } catch (Exception e) {
       log.error("Initial Ticketmaster sync failed: {}", e.getMessage(), e);
     }

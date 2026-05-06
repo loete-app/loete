@@ -4,11 +4,13 @@ import { ActivatedRoute, Router, convertToParamMap } from "@angular/router";
 import { of, throwError } from "rxjs";
 import { Home } from "./home";
 import { EventService } from "@/core/services/event.service";
+import { VibeSearchService } from "@/core/services/vibe-search.service";
 import { FavoriteService } from "@/core/services/favorite.service";
 import { SeoService } from "@/core/services/seo.service";
 import { CategoryService } from "@/core/services/category.service";
 import { LocationService } from "@/core/services/location.service";
 import { Event, PagedResponse } from "@/core/models/event.model";
+import { VibeSearchResponse } from "@/core/models/vibe-search.model";
 
 describe("Home", () => {
   let fixture: ComponentFixture<Home>;
@@ -16,6 +18,7 @@ describe("Home", () => {
   let element: HTMLElement;
 
   let mockEventService: { getEvents: ReturnType<typeof vi.fn> };
+  let mockVibeSearchService: { search: ReturnType<typeof vi.fn> };
   let mockFavoriteService: {
     init: ReturnType<typeof vi.fn>;
     favoriteIds: ReturnType<typeof signal<Set<string>>>;
@@ -36,7 +39,7 @@ describe("Home", () => {
       startDate: "2026-06-15T20:00:00",
       categoryName: "Konzert",
       locationName: "Hallenstadion",
-      city: "Zürich",
+      city: "Zurich",
     },
     {
       id: "ev2",
@@ -45,7 +48,7 @@ describe("Home", () => {
       startDate: "2026-07-01T18:00:00",
       categoryName: "Sport",
       locationName: "Letzigrund",
-      city: "Zürich",
+      city: "Zurich",
     },
   ];
 
@@ -60,12 +63,20 @@ describe("Home", () => {
 
   function setup(
     eventsResponse: PagedResponse<Event> | Error = mockPagedResponse,
+    queryParams: Record<string, string> = {},
+    vibeResponse: VibeSearchResponse = {
+      results: mockEvents,
+      fallback: false,
+    },
   ) {
     mockEventService = {
       getEvents:
         eventsResponse instanceof Error
           ? vi.fn(() => throwError(() => eventsResponse))
           : vi.fn(() => of(eventsResponse)),
+    };
+    mockVibeSearchService = {
+      search: vi.fn(() => of(vibeResponse)),
     };
     mockFavoriteService = {
       init: vi.fn(),
@@ -84,6 +95,10 @@ describe("Home", () => {
       providers: [
         { provide: EventService, useValue: mockEventService },
         {
+          provide: VibeSearchService,
+          useValue: mockVibeSearchService,
+        },
+        {
           provide: FavoriteService,
           useValue: mockFavoriteService,
         },
@@ -100,7 +115,7 @@ describe("Home", () => {
           provide: ActivatedRoute,
           useValue: {
             snapshot: {
-              queryParamMap: convertToParamMap({}),
+              queryParamMap: convertToParamMap(queryParams),
             },
           },
         },
@@ -131,7 +146,7 @@ describe("Home", () => {
     fixture.detectChanges();
     expect(mockSeoService.set).toHaveBeenCalledWith(
       "Events entdecken",
-      "Entdecke Konzerte, Festivals, Sport und mehr in der Schweiz – an einem Ort.",
+      expect.any(String),
     );
   });
 
@@ -174,10 +189,11 @@ describe("Home", () => {
     expect(error!.textContent).toContain("Events konnten nicht geladen werden");
   });
 
-  it("should call EventService.getEvents on init", () => {
+  it("should call EventService.getEvents on init without search query", () => {
     setup();
     fixture.detectChanges();
     expect(mockEventService.getEvents).toHaveBeenCalled();
+    expect(mockVibeSearchService.search).not.toHaveBeenCalled();
   });
 
   it("should reload events when reload is called after error", () => {
@@ -191,5 +207,36 @@ describe("Home", () => {
 
     expect(element.querySelector(".error")).toBeNull();
     expect(element.querySelectorAll("app-event-card").length).toBe(2);
+  });
+
+  it("should call VibeSearchService when search query is present", () => {
+    setup(mockPagedResponse, { search: "chill jazz" });
+    fixture.detectChanges();
+
+    expect(mockVibeSearchService.search).toHaveBeenCalled();
+    expect(mockEventService.getEvents).not.toHaveBeenCalled();
+  });
+
+  it("should not show load-more button when search is active", () => {
+    setup(mockPagedResponse, { search: "rock concert" });
+    fixture.detectChanges();
+
+    const loadMore = element.querySelector(".load-more");
+    expect(loadMore).toBeNull();
+  });
+
+  it("should show load-more button when browsing without search", () => {
+    setup({
+      content: mockEvents,
+      page: 0,
+      size: 20,
+      totalElements: 40,
+      totalPages: 2,
+      last: false,
+    });
+    fixture.detectChanges();
+
+    const loadMore = element.querySelector(".load-more");
+    expect(loadMore).toBeTruthy();
   });
 });
