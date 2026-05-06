@@ -12,12 +12,14 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FavoriteRepository extends JpaRepository<Favorite, String> {
 
-  List<Favorite> findByClientIdOrderByCreatedAtDesc(String clientId);
+  List<Favorite> findByUser_IdOrderByCreatedAtDesc(String userId);
 
-  Optional<Favorite> findByClientIdAndEventId(String clientId, String eventId);
+  Optional<Favorite> findByUser_IdAndEvent_Id(String userId, String eventId);
 
-  boolean existsByClientIdAndEventId(String clientId, String eventId);
+  boolean existsByUser_IdAndEvent_Id(String userId, String eventId);
 
-  @Query("SELECT f.event.id FROM Favorite f WHERE f.clientId = :clientId")
-  Set<String> findEventIdsByClientId(@Param("clientId") String clientId);
+  void deleteByUser_IdAndEvent_Id(String userId, String eventId);
+
+  @Query("SELECT f.event.id FROM Favorite f WHERE f.user.id = :userId")
+  Set<String> findEventIdsByUserId(@Param("userId") String userId);
 }

@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { RouterLink } from "@angular/router";
+import { AuthService } from "@/core/services/auth.service";
 import { FavoriteService } from "@/core/services/favorite.service";
 import { SeoService } from "@/core/services/seo.service";
 import { Favorite } from "@/core/models/favorite.model";
@@ -22,6 +23,14 @@ import {
         <h1>Meine Favoriten</h1>
         <p class="subtitle">Deine gespeicherten Events.</p>
       </header>
+
+      @if (!isAuthenticated()) {
+        <div class="anon-banner">
+          Favoriten sind nur in diesem Browser gespeichert.
+          <a routerLink="/login">Logge dich ein</a>, um sie geräteübergreifend
+          zu sichern.
+        </div>
+      }
 
       @if (loading()) {
         <p class="state">Favoriten werden geladen...</p>
@@ -223,9 +232,27 @@ import {
       opacity: 0.5;
       cursor: not-allowed;
     }
+    .anon-banner {
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      color: var(--foreground);
+      margin-bottom: 1.5rem;
+    }
+    .anon-banner a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .anon-banner a:hover {
+      text-decoration: underline;
+    }
   `,
 })
 export class Favorites implements OnInit {
+  private authService = inject(AuthService);
   private favoriteService = inject(FavoriteService);
   private seo = inject(SeoService);
 
@@ -242,9 +269,13 @@ export class Favorites implements OnInit {
   readonly fallbackImage =
     "https://placehold.co/120x80/1a1a2e/e0e0e0?text=Kein+Bild";
 
+  isAuthenticated(): boolean {
+    return this.authService.isAuthenticated();
+  }
+
   ngOnInit(): void {
     this.seo.set("Meine Favoriten", "Deine gespeicherten Events auf Löte.");
-    this.favoriteService.loadIds();
+    this.favoriteService.init();
     this.load();
   }
 

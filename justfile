@@ -117,6 +117,29 @@ test-backend:
 [group('test')]
 test: test-frontend test-backend
 
+# ── Coverage ────────────────────────────────────────────────────────
+
+# Backend tests with coverage check (JaCoCo 85% enforcement)
+[group('test')]
+test-coverage-backend:
+    cd backend && ./mvnw verify
+
+# Frontend tests with coverage
+[group('test')]
+test-coverage-frontend:
+    cd frontend && pnpm exec ng test --watch=false
+
+# All coverage checks
+[group('test')]
+test-coverage: test-coverage-backend test-coverage-frontend
+
+# ── E2E ─────────────────────────────────────────────────────────────
+
+# Run Playwright E2E tests (starts postgres, backend, and frontend automatically)
+[group('test')]
+test-e2e: up
+    cd frontend && pnpm exec playwright test
+
 # ── Build ────────────────────────────────────────────────────────────
 
 # Build frontend for production
@@ -180,3 +203,20 @@ infra-plan:
 [group('infra')]
 infra-apply:
     cd infra && tofu apply -var-file=production.tfvars
+
+# ── Test Data ────────────────────────────────────────────────────────
+
+# Seed 10 test events
+[group('test')]
+seed-test:
+    cd backend && LOETE_SEED=small ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,testdata
+
+# Seed 500 test events
+[group('test')]
+seed-test-large:
+    cd backend && LOETE_SEED=large ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,testdata
+
+# Clear all events and favorites
+[group('test')]
+seed-test-clear:
+    cd backend && LOETE_SEED=clear ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,testdata

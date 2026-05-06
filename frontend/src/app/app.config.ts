@@ -1,5 +1,7 @@
 import {
   ApplicationConfig,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from "@angular/core";
 import { provideRouter } from "@angular/router";
@@ -11,15 +13,15 @@ import {
 
 import { routes } from "./app.routes";
 import { authInterceptor } from "./core/interceptors/auth.interceptor";
-import { clientIdInterceptor } from "./core/interceptors/client-id.interceptor";
+import { FavoriteService } from "./core/services/favorite.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([clientIdInterceptor, authInterceptor]),
-      withFetch(),
-    ),
+    provideHttpClient(withInterceptors([authInterceptor]), withFetch()),
+    provideAppInitializer(() => {
+      inject(FavoriteService).init();
+    }),
   ],
 };
