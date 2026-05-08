@@ -1,3 +1,10 @@
+/**
+ * Service für Authentifizierung und Session-Verwaltung.
+ *
+ * Verwaltet Login, Registrierung, Logout, Token-Refresh und
+ * die Speicherung der Session-Daten im SessionStorage.
+ * Triggert nach dem Login die Migration lokaler Favoriten.
+ */
 import {
   Injectable,
   Injector,
@@ -20,18 +27,33 @@ import { FavoriteService } from "./favorite.service";
 
 @Injectable({ providedIn: "root" })
 export class AuthService {
+  /** HTTP-Client für API-Aufrufe. */
   private readonly http = inject(HttpClient);
+  /** Angular Router für Navigationen. */
   private readonly router = inject(Router);
+  /** Plattform-ID zur Browser/Server-Unterscheidung. */
   private readonly platformId = inject(PLATFORM_ID);
+  /** Injector für die lazy Aufloesung des FavoriteService. */
   private readonly injector = inject(Injector);
+  /** Basis-URL der Auth-API-Endpunkte. */
   private readonly apiUrl = `${environment.apiUrl}/auth`;
 
+  /** SessionStorage-Schlüssel für das Access-Token. */
   private readonly TOKEN_KEY = "loete_token";
+  /** SessionStorage-Schlüssel für das Refresh-Token. */
   private readonly REFRESH_KEY = "loete_refresh_token";
+  /** SessionStorage-Schlüssel für die Benutzerdaten. */
   private readonly USER_KEY = "loete_user";
 
+  /** Signal mit dem aktuell eingeloggten Benutzer (oder null). */
   readonly currentUser = signal<User | null>(this.loadUser());
 
+  /**
+   * Meldet einen Benutzer an.
+   *
+   * @param request die Login-Daten
+   * @returns Observable mit der Authentifizierungsantwort
+   */
   login(request: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, request).pipe(
       tap((res) => {
@@ -41,6 +63,12 @@ export class AuthService {
     );
   }
 
+  /**
+   * Registriert einen neuen Benutzer.
+   *
+   * @param request die Registrierungsdaten
+   * @returns Observable mit der Authentifizierungsantwort
+   */
   register(request: RegisterRequest): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${this.apiUrl}/register`, request)
@@ -52,6 +80,7 @@ export class AuthService {
       );
   }
 
+  /** Meldet den Benutzer ab, löscht die Session und navigiert zum Login. */
   logout(): void {
     const refreshToken = this.getRefreshToken();
     if (refreshToken) {
@@ -63,20 +92,40 @@ export class AuthService {
     this.router.navigate(["/login"]);
   }
 
+  /**
+   * Gibt das gespeicherte Access-Token zurück.
+   *
+   * @returns das Token oder null (auf dem Server immer null)
+   */
   getToken(): string | null {
     if (!isPlatformBrowser(this.platformId)) return null;
     return sessionStorage.getItem(this.TOKEN_KEY);
   }
 
+  /**
+   * Gibt das gespeicherte Refresh-Token zurück.
+   *
+   * @returns das Refresh-Token oder null
+   */
   getRefreshToken(): string | null {
     if (!isPlatformBrowser(this.platformId)) return null;
     return sessionStorage.getItem(this.REFRESH_KEY);
   }
 
+  /**
+   * Prüft, ob der Benutzer authentifiziert ist.
+   *
+   * @returns true wenn ein Access-Token vorhanden ist
+   */
   isAuthenticated(): boolean {
     return !!this.getToken();
   }
 
+  /**
+   * Erneuert das Access-Token über den Refresh-Endpunkt.
+   *
+   * @returns Observable mit der neuen Authentifizierungsantwort
+   */
   refreshAccessToken(): Observable<AuthResponse> {
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
@@ -87,6 +136,7 @@ export class AuthService {
       .pipe(tap((res) => this.handleAuthResponse(res)));
   }
 
+  /** Migriert nach dem Login lokale Favoriten auf den Server. */
   private afterLogin(): void {
     const favoriteService = this.getFavoriteService();
     if (!favoriteService) return;
@@ -96,6 +146,11 @@ export class AuthService {
     });
   }
 
+  /**
+   * Lädt den FavoriteService lazy über den Injector.
+   *
+   * @returns die FavoriteService-Instanz oder null
+   */
   private getFavoriteService(): FavoriteService | null {
     try {
       return this.injector.get(FavoriteService);
@@ -104,6 +159,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * Speichert die Authentifizierungsdaten im SessionStorage.
+   *
+   * @param res die Authentifizierungsantwort
+   */
   private handleAuthResponse(res: AuthResponse): void {
     if (isPlatformBrowser(this.platformId)) {
       sessionStorage.setItem(this.TOKEN_KEY, res.accessToken);
@@ -118,6 +178,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * Lädt den Benutzer aus dem SessionStorage (beim Service-Start).
+   *
+   * @returns der gespeicherte Benutzer oder null
+   */
   private loadUser(): User | null {
     if (typeof window === "undefined") return null;
     const stored = sessionStorage.getItem(this.USER_KEY);
@@ -129,6 +194,7 @@ export class AuthService {
     }
   }
 
+  /** Löscht alle Session-Daten aus dem SessionStorage. */
   private clearStorage(): void {
     if (isPlatformBrowser(this.platformId)) {
       sessionStorage.removeItem(this.TOKEN_KEY);

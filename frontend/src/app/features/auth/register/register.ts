@@ -1,3 +1,10 @@
+/**
+ * Registrierungs-Seite für neue Benutzer.
+ *
+ * Zeigt ein Formular mit E-Mail, Benutzername und Passwort an.
+ * Validiert die Eingaben clientseitig und leitet nach erfolgreicher
+ * Registrierung auf die Startseite weiter.
+ */
 import { Component, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
@@ -159,15 +166,23 @@ import { RegisterRequest } from "@/core/models/auth.model";
   `,
 })
 export class Register {
+  /** Auth-Service für die Registrierung. */
   private authService = inject(AuthService);
+  /** Router für die Weiterleitung nach der Registrierung. */
   private router = inject(Router);
 
+  /** Eingabewert für die E-Mail-Adresse. */
   email = "";
+  /** Eingabewert für den Benutzernamen. */
   username = "";
+  /** Eingabewert für das Passwort. */
   password = "";
+  /** Fehlermeldung bei ungueliger Registrierung. */
   error = signal<string | null>(null);
+  /** Ladezustand waehrend der Registrierung. */
   loading = signal(false);
 
+  /** Validiert die Eingaben und führt die Registrierung durch. */
   onSubmit(): void {
     this.error.set(null);
 

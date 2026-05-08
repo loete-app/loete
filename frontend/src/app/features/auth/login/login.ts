@@ -1,3 +1,9 @@
+/**
+ * Login-Seite für die Benutzer-Anmeldung.
+ *
+ * Zeigt ein Formular mit E-Mail und Passwort an und leitet
+ * nach erfolgreicher Anmeldung auf die returnUrl oder die Startseite weiter.
+ */
 import { Component, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
@@ -148,15 +154,23 @@ import { LoginRequest } from "@/core/models/auth.model";
   `,
 })
 export class Login {
+  /** Auth-Service für die Anmeldung. */
   private authService = inject(AuthService);
+  /** Aktuelle Route für den Zugriff auf Query-Parameter. */
   private route = inject(ActivatedRoute);
+  /** Router für die Weiterleitung nach dem Login. */
   private router = inject(Router);
 
+  /** Eingabewert für die E-Mail-Adresse. */
   email = "";
+  /** Eingabewert für das Passwort. */
   password = "";
+  /** Fehlermeldung bei ungültigem Login. */
   error = signal<string | null>(null);
+  /** Ladezustand waehrend der Anmeldung. */
   loading = signal(false);
 
+  /** Validiert die Eingaben und führt den Login durch. */
   onSubmit(): void {
     this.error.set(null);
 

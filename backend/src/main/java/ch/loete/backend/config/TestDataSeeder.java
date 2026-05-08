@@ -15,22 +15,47 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Seeder für Testdaten im Profil "testdata".
+ *
+ * <p>Generiert synthetische Events, Locations und Kategorie-Zuordnungen für Entwicklungs- und
+ * Testzwecke. Unterstützt die Modi "small" (10 Events), "large" (500 Events) und "clear" (alle
+ * Events loeschen).
+ */
 @Slf4j
 @Component
 @Profile("testdata")
 @RequiredArgsConstructor
 public class TestDataSeeder implements CommandLineRunner {
 
+  /** Repository für den Zugriff auf Event-Daten. */
   private final EventRepository eventRepository;
+
+  /** Repository für den Zugriff auf Kategorie-Daten. */
   private final CategoryRepository categoryRepository;
+
+  /** Repository für den Zugriff auf Location-Daten. */
   private final LocationRepository locationRepository;
+
+  /** Repository für den Zugriff auf Favoriten-Daten. */
   private final FavoriteRepository favoriteRepository;
 
+  /** Städte für die Testdaten-Generierung. */
   private static final String[] CITIES = {"Bern", "Zürich", "Basel", "Genf"};
+
+  /** Veranstaltungsorte passend zu den Städten. */
   private static final String[] VENUE_NAMES = {
     "Stade de Suisse", "Hallenstadion", "St. Jakob-Park", "Arena Genève"
   };
 
+  /**
+   * Führt den Seeder beim Anwendungsstart aus.
+   *
+   * <p>Der Modus wird über die Umgebungsvariable {@code LOETE_SEED} gesteuert: "clear" löscht alle
+   * Daten, "large" erzeugt 500 Events, Standard ist "small" (10 Events).
+   *
+   * @param args Kommandozeilenargumente (werden nicht verwendet)
+   */
   @Override
   public void run(String... args) {
     String mode = System.getenv().getOrDefault("LOETE_SEED", "small");
@@ -42,20 +67,30 @@ public class TestDataSeeder implements CommandLineRunner {
     }
   }
 
+  /** Erzeugt einen kleinen Testdatensatz mit 10 Events. */
   void seedSmall() {
     seed(10);
   }
 
+  /** Erzeugt einen grossen Testdatensatz mit 500 Events. */
   void seedLarge() {
     seed(500);
   }
 
+  /** Löscht alle Events und Favoriten aus der Datenbank. */
   void clear() {
     favoriteRepository.deleteAll();
     eventRepository.deleteAll();
     log.info("Cleared all events and favorites");
   }
 
+  /**
+   * Erzeugt die angegebene Anzahl an Test-Events mit zugehörigen Locations.
+   *
+   * <p>Bereits existierende Events (anhand der externen ID) werden übersprungen.
+   *
+   * @param count Anzahl der zu erzeugenden Events
+   */
   private void seed(int count) {
     List<Category> categories = categoryRepository.findAllByOrderByNameAsc();
     if (categories.isEmpty()) {

@@ -12,16 +12,42 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * JPA-Repository für den Datenbankzugriff auf {@link Event}-Entitäten.
+ *
+ * <p>Bietet neben Standard-CRUD-Operationen auch native pgvector-Queries für die semantische
+ * Ähnlichkeitssuche und Embedding-Verwaltung.
+ */
 @Repository
 public interface EventRepository
     extends JpaRepository<Event, String>, JpaSpecificationExecutor<Event> {
 
+  /**
+   * Findet ein Event anhand seiner externen Ticketmaster-ID.
+   *
+   * @param externalId die externe ID
+   * @return das Event, falls vorhanden
+   */
   Optional<Event> findByExternalId(String externalId);
 
+  /**
+   * Löscht alle Events, deren Startdatum vor dem angegebenen Zeitpunkt liegt.
+   *
+   * @param cutoff der Grenz-Zeitpunkt
+   * @return die Anzahl geloeschter Events
+   */
   @Modifying
   @Transactional
   int deleteByStartDateBefore(LocalDateTime cutoff);
 
+  /**
+   * Findet Events anhand der Kosinusaehnlichkeit ihres Embeddings zum Query-Vektor.
+   *
+   * @param queryVector der Query-Vektor als pgvector-String
+   * @param threshold der Ähnlichkeitsschwellenwert
+   * @param limit maximale Anzahl Ergebnisse
+   * @return die ähnlichsten Events, sortiert nach Ähnlichkeit
+   */
   @Query(
       value =
           "SELECT e.* FROM events e"
@@ -35,6 +61,19 @@ public interface EventRepository
       @Param("threshold") double threshold,
       @Param("limit") int limit);
 
+  /**
+   * Findet Events mittels hybrider Suche: Kosinusaehnlichkeit kombiniert mit optionalen
+   * strukturierten Filtern (Kategorie, Stadt, Datumsbereich).
+   *
+   * @param queryVector der Query-Vektor als pgvector-String
+   * @param threshold der Ähnlichkeitsschwellenwert
+   * @param categoryId Kategorie-ID-Filter (oder {@code null})
+   * @param city Stadt-Filter (oder {@code null})
+   * @param dateFrom Startdatum-Filter (oder {@code null})
+   * @param dateTo Enddatum-Filter (oder {@code null})
+   * @param limit maximale Anzahl Ergebnisse
+   * @return die gefilterten, ähnlichsten Events
+   */
   @Query(
       value =
           "SELECT e.* FROM events e"
@@ -61,6 +100,13 @@ public interface EventRepository
       @Param("dateTo") LocalDateTime dateTo,
       @Param("limit") int limit);
 
+  /**
+   * Aktualisiert das Embedding eines Events via nativem SQL.
+   *
+   * @param eventId die Event-ID
+   * @param embedding der Embedding-Vektor als pgvector-String
+   * @param embeddingInput der Eingabetext, der für das Embedding verwendet wurde
+   */
   @Modifying
   @Transactional
   @Query(
@@ -75,6 +121,12 @@ public interface EventRepository
       @Param("embedding") String embedding,
       @Param("embeddingInput") String embeddingInput);
 
+  /**
+   * Findet Events, die ein Embedding benötigen (kein Embedding oder älter als der Cutoff).
+   *
+   * @param staleCutoff der Zeitpunkt, ab dem Embeddings als veraltet gelten
+   * @return die Events, sortiert nach Embedding-Alter (älteste zuerst)
+   */
   @Query(
       "SELECT e FROM Event e"
           + " LEFT JOIN FETCH e.category"

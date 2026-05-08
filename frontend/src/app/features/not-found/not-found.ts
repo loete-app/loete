@@ -1,3 +1,9 @@
+/**
+ * 404-Fehlerseite.
+ *
+ * Wird angezeigt, wenn eine nicht existierende Route aufgerufen wird.
+ * Bietet einen Link zurück zur Startseite.
+ */
 import { Component, inject, OnInit } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { SeoService } from "@/core/services/seo.service";
@@ -33,8 +39,10 @@ import { SeoService } from "@/core/services/seo.service";
   `,
 })
 export class NotFound implements OnInit {
+  /** Service für SEO-Meta-Tags. */
   private seo = inject(SeoService);
 
+  /** Setzt die SEO-Meta-Tags für die 404-Seite. */
   ngOnInit(): void {
     this.seo.set("Seite nicht gefunden", "Diese Seite existiert nicht.");
   }

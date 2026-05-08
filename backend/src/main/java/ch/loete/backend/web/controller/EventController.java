@@ -17,14 +17,35 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST-Controller für Event-Endpunkte.
+ *
+ * <p>Stellt öffentliche GET-Endpunkte für die paginierte Event-Liste (mit Filterung) und die
+ * Event-Detailansicht bereit.
+ */
 @RestController
 @RequestMapping("/events")
 @RequiredArgsConstructor
 public class EventController {
 
+  /** Service für Event-Geschaeftslogik. */
   private final EventService eventService;
+
+  /** Repository für die Aufloesung des Benutzers aus dem Authentication-Objekt. */
   private final UserRepository userRepository;
 
+  /**
+   * Gibt eine paginierte, gefilterte Liste von Events zurück.
+   *
+   * @param categoryId optionale Kategorie-ID
+   * @param city optionaler Stadtfilter
+   * @param dateFrom optionales Startdatum (ISO-Format)
+   * @param dateTo optionales Enddatum (ISO-Format)
+   * @param search optionaler Suchbegriff
+   * @param page Seitennummer (Standard: 0)
+   * @param size Seitengrösse (Standard: 20)
+   * @return die paginierte Event-Liste
+   */
   @GetMapping
   public ResponseEntity<PagedResponse<EventResponse>> getEvents(
       @RequestParam(required = false) Long categoryId,
@@ -41,6 +62,15 @@ public class EventController {
     return ResponseEntity.ok(eventService.getEvents(filter));
   }
 
+  /**
+   * Gibt die Detailansicht eines Events zurück.
+   *
+   * <p>Bei authentifizierten Benutzern wird zusaetzlich der Favoriten-Status ermittelt.
+   *
+   * @param id die Event-ID
+   * @param auth das Authentication-Objekt (oder {@code null} für anonyme Nutzer)
+   * @return die Event-Detailansicht
+   */
   @GetMapping("/{id}")
   public ResponseEntity<EventDetailResponse> getEvent(
       @PathVariable String id, Authentication auth) {

@@ -15,14 +15,35 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Servlet-Filter für die JWT-basierte Authentifizierung.
+ *
+ * <p>Extrahiert das Bearer-Token aus dem Authorization-Header, validiert es und setzt bei Erfolg
+ * den SecurityContext mit den Benutzerdaten. Requests an {@code /auth/**} werden übersprungen.
+ */
 @Component
 @RequiredArgsConstructor
 @org.springframework.context.annotation.Profile("!test")
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+  /** Provider für JWT-Token-Operationen (Generierung, Validierung, Parsing). */
   private final JwtTokenProvider jwtTokenProvider;
+
+  /** Service zum Laden der Benutzerdetails anhand der E-Mail-Adresse. */
   private final UserDetailsService userDetailsService;
 
+  /**
+   * Führt die JWT-Authentifizierung für jeden eingehenden Request durch.
+   *
+   * <p>Extrahiert das Token, validiert es und setzt bei Erfolg den Spring-Security-Kontext mit dem
+   * authentifizierten Benutzer.
+   *
+   * @param request der eingehende HTTP-Request
+   * @param response die HTTP-Response
+   * @param filterChain die Filter-Kette
+   * @throws ServletException bei Servlet-Fehlern
+   * @throws IOException bei Ein-/Ausgabefehlern
+   */
   @Override
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -44,11 +65,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
+  /**
+   * Bestimmt, ob der Filter für den gegebenen Request übersprungen werden soll.
+   *
+   * @param request der eingehende HTTP-Request
+   * @return {@code true} wenn der Pfad mit {@code /auth/} beginnt
+   */
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
     return request.getServletPath().startsWith("/auth/");
   }
 
+  /**
+   * Extrahiert das JWT-Token aus dem Authorization-Header.
+   *
+   * @param request der eingehende HTTP-Request
+   * @return das Token ohne "Bearer "-Praefix, oder {@code null} falls nicht vorhanden
+   */
   private String extractToken(HttpServletRequest request) {
     String header = request.getHeader("Authorization");
     if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {

@@ -19,13 +19,32 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service für Event-bezogene Geschaeftslogik.
+ *
+ * <p>Stellt paginierte Event-Listen mit Filterung (Kategorie, Stadt, Datum, Textsuche) sowie die
+ * Detailansicht einzelner Events bereit. Prüft bei authentifizierten Benutzern den
+ * Favoriten-Status.
+ */
 @Service
 @RequiredArgsConstructor
 public class EventService {
 
+  /** Repository für den Zugriff auf Event-Daten. */
   private final EventRepository eventRepository;
+
+  /** Repository für die Favoriten-Abfrage (Favoritenstatus). */
   private final FavoriteRepository favoriteRepository;
 
+  /**
+   * Gibt eine paginierte, gefilterte Liste von Events zurück.
+   *
+   * <p>Die Events werden nach Startdatum aufsteigend sortiert. Filter koennen Kategorie, Stadt,
+   * Datumsbereich und Textsuche umfassen.
+   *
+   * @param filter die Filterkriterien und Paginierungsparameter
+   * @return die paginierte Event-Liste
+   */
   @Transactional(readOnly = true)
   public PagedResponse<EventResponse> getEvents(EventFilterRequest filter) {
     List<Specification<Event>> specs =
@@ -52,6 +71,14 @@ public class EventService {
         result.isLast());
   }
 
+  /**
+   * Gibt die Detailansicht eines Events zurück.
+   *
+   * @param id die Event-ID
+   * @param userId die Benutzer-ID (oder {@code null} für anonyme Nutzer)
+   * @return die Detailantwort mit Favoritenstatus
+   * @throws ResourceNotFoundException wenn das Event nicht existiert
+   */
   @Transactional(readOnly = true)
   public EventDetailResponse getEvent(String id, String userId) {
     Event event =
@@ -62,6 +89,12 @@ public class EventService {
     return toEventDetailResponse(event, favorited);
   }
 
+  /**
+   * Konvertiert eine Event-Entität in ein EventResponse-DTO.
+   *
+   * @param event die Event-Entität
+   * @return das Response-DTO
+   */
   private EventResponse toEventResponse(Event event) {
     return new EventResponse(
         event.getId(),
@@ -73,6 +106,13 @@ public class EventService {
         event.getLocation() != null ? event.getLocation().getCity() : null);
   }
 
+  /**
+   * Konvertiert eine Event-Entität in ein EventDetailResponse-DTO.
+   *
+   * @param event die Event-Entität
+   * @param favorited ob das Event vom Benutzer favorisiert ist
+   * @return das Detail-Response-DTO
+   */
   private EventDetailResponse toEventDetailResponse(Event event, boolean favorited) {
     return new EventDetailResponse(
         event.getId(),

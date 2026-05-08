@@ -17,6 +17,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * JPA-Entität für Benutzer-Favoriten.
+ *
+ * <p>Repräsentiert die Zuordnung eines Events zu einem Benutzer als Favorit. Die Kombination aus
+ * Benutzer und Event ist eindeutig (Unique Constraint).
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -27,22 +33,27 @@ import org.hibernate.annotations.CreationTimestamp;
     uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "event_id"}))
 public class Favorite {
 
+  /** Eindeutige 8-Zeichen-NanoID des Favoriten-Eintrags. */
   @Id
   @Column(length = 8)
   private String id;
 
+  /** Benutzer, dem der Favorit gehört. */
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
+  /** Das als Favorit markierte Event. */
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "event_id", nullable = false)
   private Event event;
 
+  /** Zeitpunkt, zu dem der Favorit erstellt wurde. */
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)
   private Instant createdAt;
 
+  /** Generiert vor dem Persistieren eine NanoID, falls noch keine ID gesetzt ist. */
   @PrePersist
   public void prePersist() {
     if (this.id == null) {

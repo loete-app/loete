@@ -1,3 +1,10 @@
+/**
+ * Event-Detailseite.
+ *
+ * Zeigt alle Informationen zu einem einzelnen Event an, inklusive
+ * Bild, Datum, Veranstaltungsort, Beschreibung und Ticket-Link.
+ * Ermöglicht das Favorisieren/Entfavorisieren des Events.
+ */
 import { Component, inject, OnInit, signal } from "@angular/core";
 import { DatePipe, Location } from "@angular/common";
 import { ActivatedRoute } from "@angular/router";
@@ -277,26 +284,43 @@ import {
   `,
 })
 export class EventDetailPage implements OnInit {
+  /** Aktive Route für den Zugriff auf die Event-ID. */
   private route = inject(ActivatedRoute);
+  /** Angular Location-Service für die Zurück-Navigation. */
   private location = inject(Location);
+  /** Service für Event-Daten. */
   private eventService = inject(EventService);
+  /** Service für Favoriten-Operationen. */
   private favoriteService = inject(FavoriteService);
+  /** Service für SEO-Meta-Tags. */
   private seo = inject(SeoService);
 
+  /** Aktuell geladenes Event. */
   event = signal<EventDetail | null>(null);
+  /** Ladezustand waehrend des Event-Ladens. */
   loading = signal(true);
+  /** Fehlermeldung bei Ladeproblemen. */
   error = signal<string | null>(null);
+  /** Ladezustand waehrend der Favoriten-Aktion. */
   favLoading = signal(false);
 
+  /** Kalender-Icon für die Datumsanzeige. */
   readonly CalendarIcon = Calendar;
+  /** Karten-Pin-Icon für die Ortsanzeige. */
   readonly MapPinIcon = MapPin;
+  /** Zurück-Pfeil-Icon. */
   readonly BackIcon = ArrowLeft;
+  /** Herz-Icon für die Favoriten-Funktion. */
   readonly HeartIcon = Heart;
+  /** Ticket-Icon für den Ticket-Link. */
   readonly TicketIcon = Ticket;
+  /** Warndreieck-Icon für Fehlermeldungen. */
   readonly AlertIcon = AlertTriangle;
+  /** Fallback-Bild-URL wenn kein Event-Bild vorhanden ist. */
   readonly fallbackImage =
     "https://placehold.co/960x500/1a1a2e/e0e0e0?text=Kein+Bild";
 
+  /** Initialisiert die Seite, lädt das Event anhand der Route-ID. */
   ngOnInit(): void {
     this.seo.set("Event-Details", "Event-Details auf Löte.");
     this.favoriteService.init();
@@ -306,10 +330,12 @@ export class EventDetailPage implements OnInit {
     });
   }
 
+  /** Navigiert zur vorherigen Seite. */
   goBack(): void {
     this.location.back();
   }
 
+  /** Prüft, ob eine URL ein sicheres Protokoll (http/https) verwendet. */
   isSafeUrl(url: string): boolean {
     try {
       const p = new URL(url);
@@ -319,6 +345,7 @@ export class EventDetailPage implements OnInit {
     }
   }
 
+  /** Wechselt den Favoriten-Status des Events. */
   toggleFavorite(): void {
     const ev = this.event();
     if (!ev || this.favLoading()) return;
@@ -340,11 +367,13 @@ export class EventDetailPage implements OnInit {
     }
   }
 
+  /** Setzt das Fallback-Bild bei Bild-Ladefehler. */
   onImageError(event: globalThis.Event): void {
     const img = event.target as HTMLImageElement;
     img.src = this.fallbackImage;
   }
 
+  /** Lädt ein Event anhand seiner ID vom Server. */
   private loadEvent(id: string): void {
     this.loading.set(true);
     this.error.set(null);

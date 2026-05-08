@@ -1,3 +1,10 @@
+/**
+ * Service für die Verwaltung von Benutzer-Favoriten.
+ *
+ * Unterstützt sowohl authentifizierte (Server-) als auch anonyme
+ * (LocalStorage-) Favoriten. Stellt Methoden zum Hinzufuegen,
+ * Entfernen, Abfragen und Migrieren von Favoriten bereit.
+ */
 import { Injectable, PLATFORM_ID, inject, signal } from "@angular/core";
 import { isPlatformBrowser } from "@angular/common";
 import { HttpClient } from "@angular/common/http";
@@ -10,15 +17,23 @@ import { AuthService } from "./auth.service";
 
 @Injectable({ providedIn: "root" })
 export class FavoriteService {
+  /** HTTP-Client für API-Aufrufe. */
   private readonly http = inject(HttpClient);
+  /** Auth-Service für Authentifizierungsstatus-Abfragen. */
   private readonly authService = inject(AuthService);
+  /** Plattform-ID zur Browser/Server-Unterscheidung. */
   private readonly platformId = inject(PLATFORM_ID);
+  /** Basis-URL der Favoriten-API-Endpunkte. */
   private readonly apiUrl = `${environment.apiUrl}/favorites`;
+  /** LocalStorage-Schlüssel für anonyme Favoriten. */
   private readonly STORAGE_KEY = "loete_favorites";
 
+  /** Signal mit den aktuellen Favoriten-Event-IDs. */
   readonly favoriteIds = signal<Set<string>>(new Set());
+  /** Flag, ob die Favoriten bereits geladen wurden. */
   private loaded = false;
 
+  /** Initialisiert die Favoriten (vom Server oder aus dem LocalStorage). */
   init(): void {
     if (this.authService.isAuthenticated()) {
       this.loadFromServer();
@@ -27,15 +42,27 @@ export class FavoriteService {
     }
   }
 
+  /** Setzt den Service-Zustand zurück (z.B. beim Logout). */
   reset(): void {
     this.loaded = false;
     this.favoriteIds.set(new Set());
   }
 
+  /**
+   * Prüft, ob ein Event favorisiert ist.
+   *
+   * @param eventId die Event-ID
+   * @returns true wenn das Event in den Favoriten ist
+   */
   isFavorite(eventId: string): boolean {
     return this.favoriteIds().has(eventId);
   }
 
+  /**
+   * Ruft alle Favoriten ab (vom Server oder als lokale Rekonstruktion).
+   *
+   * @returns Observable mit der Favoriten-Liste
+   */
   getFavorites(): Observable<Favorite[]> {
     if (this.authService.isAuthenticated()) {
       return this.http.get<Favorite[]>(this.apiUrl);
@@ -85,6 +112,12 @@ export class FavoriteService {
     );
   }
 
+  /**
+   * Fügt ein Event als Favorit hinzu.
+   *
+   * @param eventId die Event-ID
+   * @returns Observable mit dem erstellten Favoriten
+   */
   addFavorite(eventId: string): Observable<Favorite> {
     if (this.authService.isAuthenticated()) {
       return this.http
@@ -107,6 +140,12 @@ export class FavoriteService {
     });
   }
 
+  /**
+   * Entfernt ein Event aus den Favoriten.
+   *
+   * @param eventId die Event-ID
+   * @returns Observable (void)
+   */
   removeFavorite(eventId: string): Observable<void> {
     if (this.authService.isAuthenticated()) {
       return this.http
@@ -119,6 +158,11 @@ export class FavoriteService {
     return of(undefined);
   }
 
+  /**
+   * Migriert lokal gespeicherte Favoriten auf den Server.
+   *
+   * @returns Observable mit dem Migrationsergebnis
+   */
   migrateLocalFavoritesToServer(): Observable<unknown> {
     if (!isPlatformBrowser(this.platformId)) return of(null);
 
@@ -151,6 +195,7 @@ export class FavoriteService {
       );
   }
 
+  /** Lädt die Favoriten-IDs vom Server. */
   private loadFromServer(): void {
     if (this.loaded) return;
     this.loaded = true;
@@ -160,6 +205,7 @@ export class FavoriteService {
     });
   }
 
+  /** Lädt die Favoriten-IDs aus dem LocalStorage. */
   private loadFromLocalStorage(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.loaded = true;
@@ -174,11 +220,21 @@ export class FavoriteService {
     }
   }
 
+  /**
+   * Speichert die Favoriten-IDs im LocalStorage.
+   *
+   * @param ids die zu speichernden Event-IDs
+   */
   private saveToLocalStorage(ids: Set<string>): void {
     if (!isPlatformBrowser(this.platformId)) return;
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify([...ids]));
   }
 
+  /**
+   * Aktualisiert das Favoriten-Signal immutabel.
+   *
+   * @param fn die Mutationsfunktion auf dem kopierten Set
+   */
   private updateSignal(fn: (set: Set<string>) => void): void {
     this.favoriteIds.update((set) => {
       const next = new Set(set);

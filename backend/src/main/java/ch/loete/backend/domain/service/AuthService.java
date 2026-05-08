@@ -21,19 +21,42 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service für Authentifizierungs- und Autorisierungsoperationen.
+ *
+ * <p>Verwaltet Registrierung, Login, Token-Refresh und Logout. Erzeugt JWT-Access-Tokens und
+ * UUID-basierte Refresh-Tokens mit Token-Rotation (altes Token wird bei Refresh gelöscht).
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+  /** Repository für den Zugriff auf Benutzer-Daten. */
   private final UserRepository userRepository;
+
+  /** Repository für den Zugriff auf Refresh-Token-Daten. */
   private final RefreshTokenRepository refreshTokenRepository;
+
+  /** Encoder für die Passwort-Hashung mit BCrypt. */
   private final PasswordEncoder passwordEncoder;
+
+  /** Provider für die JWT-Token-Generierung. */
   private final JwtTokenProvider jwtTokenProvider;
+
+  /** Manager für die Spring-Security-Authentifizierung. */
   private final AuthenticationManager authenticationManager;
 
+  /** Gültigkeitsdauer eines Refresh-Tokens in Millisekunden. */
   @Value("${app.jwt.refresh-expiration-ms}")
   private long refreshExpirationMs;
 
+  /**
+   * Registriert einen neuen Benutzer und gibt ein Token-Paar zurück.
+   *
+   * @param request die Registrierungsdaten (E-Mail, Benutzername, Passwort)
+   * @return die Authentifizierungsantwort mit Access- und Refresh-Token
+   * @throws DuplicateResourceException wenn E-Mail oder Benutzername bereits existieren
+   */
   @Transactional
   public AuthResponse register(RegisterRequest request) {
     if (userRepository.existsByEmail(request.email())
@@ -52,6 +75,13 @@ public class AuthService {
     return buildAuthResponse(user);
   }
 
+  /**
+   * Authentifiziert einen Benutzer und gibt ein Token-Paar zurück.
+   *
+   * @param request die Login-Daten (E-Mail, Passwort)
+   * @return die Authentifizierungsantwort mit Access- und Refresh-Token
+   * @throws AuthenticationException wenn die Anmeldedaten ungültig sind
+   */
   @Transactional
   public AuthResponse login(LoginRequest request) {
     authenticationManager.authenticate(
@@ -65,6 +95,15 @@ public class AuthService {
     return buildAuthResponse(user);
   }
 
+  /**
+   * Erneuert ein Token-Paar anhand eines gültigen Refresh-Tokens.
+   *
+   * <p>Das alte Refresh-Token wird gelöscht und ein neues generiert (Token-Rotation).
+   *
+   * @param request der Refresh-Request mit dem aktuellen Refresh-Token
+   * @return die Authentifizierungsantwort mit neuem Access- und Refresh-Token
+   * @throws AuthenticationException wenn das Refresh-Token ungültig oder abgelaufen ist
+   */
   @Transactional
   public AuthResponse refresh(RefreshRequest request) {
     RefreshToken refreshToken =
@@ -83,11 +122,22 @@ public class AuthService {
     return buildAuthResponse(user);
   }
 
+  /**
+   * Meldet einen Benutzer ab, indem das Refresh-Token gelöscht wird.
+   *
+   * @param refreshToken das zu loeschende Refresh-Token
+   */
   @Transactional
   public void logout(String refreshToken) {
     refreshTokenRepository.deleteByToken(refreshToken);
   }
 
+  /**
+   * Erstellt eine AuthResponse mit neuem Access- und Refresh-Token für den Benutzer.
+   *
+   * @param user der Benutzer, für den die Tokens generiert werden
+   * @return die vollständige Authentifizierungsantwort
+   */
   private AuthResponse buildAuthResponse(User user) {
     String accessToken =
         jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getEmail());
