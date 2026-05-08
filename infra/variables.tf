@@ -5,8 +5,8 @@ variable "project_id" {
 
 variable "region" {
   type        = string
-  default     = "europe-west6"
-  description = "GCP region (Zurich)"
+  default     = "europe-west1"
+  description = "GCP region (Belgium)"
 }
 
 variable "github_repo" {

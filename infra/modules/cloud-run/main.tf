@@ -114,6 +114,16 @@ resource "google_cloud_run_v2_service" "backend" {
         }
       }
 
+      env {
+        name = "EMBEDDINGS_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = var.secret_ids["embeddings-api-key"]
+            version = "latest"
+          }
+        }
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"
