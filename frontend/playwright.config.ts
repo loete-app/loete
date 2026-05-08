@@ -14,7 +14,7 @@ export default defineConfig({
     {
       command:
         "cd ../backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev -Dspring-boot.run.arguments=--spring.docker.compose.enabled=false",
-      url: "http://localhost:8080/api/sample/health",
+      url: "http://localhost:8080/api/actuator/health",
       reuseExistingServer: true,
       timeout: 120_000,
       stdout: "ignore",
