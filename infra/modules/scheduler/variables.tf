@@ -18,3 +18,8 @@ variable "audience" {
   description = "OIDC audience claim Cloud Scheduler will set on its token; must match app.scheduler.audience in the backend"
   default     = "loete-scheduler"
 }
+
+variable "github_sa_email" {
+  type        = string
+  description = "GitHub Actions deployer SA email; needs actAs on the scheduler SA to create jobs that mint OIDC tokens as it"
+}

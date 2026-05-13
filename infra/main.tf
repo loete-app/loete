@@ -63,10 +63,11 @@ module "cloud_run" {
 module "scheduler" {
   source = "./modules/scheduler"
 
-  project_id  = var.project_id
-  region      = var.region
-  backend_url = module.cloud_run.backend_url
-  audience    = "loete-scheduler"
+  project_id      = var.project_id
+  region          = var.region
+  backend_url     = module.cloud_run.backend_url
+  audience        = "loete-scheduler"
+  github_sa_email = module.iam.github_sa_email
 
-  depends_on = [google_project_service.apis, module.cloud_run]
+  depends_on = [google_project_service.apis, module.cloud_run, module.iam]
 }
