@@ -1,28 +1,30 @@
-package ch.loete.backend.config;
+package ch.loete.backend.domain.job;
 
 import ch.loete.backend.domain.service.TicketmasterIntegrationService;
 import ch.loete.backend.process.repository.EventRepository;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
- * Scheduler für die periodische Synchronisation von Events aus der Ticketmaster-API.
+ * Job für die Synchronisation von Events aus der Ticketmaster-API.
  *
- * <p>Führt täglich um 03:00 Uhr (Europe/Zurich) eine Synchronisation durch und startet beim
- * Anwendungsstart eine initiale Synchronisation, falls die Events-Tabelle leer ist. Nach jeder
- * erfolgreichen Synchronisation wird ein {@link TicketmasterSyncCompleteEvent} publiziert.
+ * <p>Wird extern via Cloud Scheduler über {@code POST /api/internal/jobs/ticketmaster-sync}
+ * angestossen und führt zusätzlich beim Anwendungsstart eine initiale Synchronisation durch, falls
+ * die Events-Tabelle leer ist. Nach jeder erfolgreichen Synchronisation wird ein {@link
+ * TicketmasterSyncCompleteEvent} publiziert.
  */
 @Slf4j
 @Component
 @Profile("!test & !testdata")
 @RequiredArgsConstructor
-public class TicketmasterSyncScheduler implements ApplicationRunner {
+public class TicketmasterSyncJob implements ApplicationRunner {
 
   /** Service für die Ticketmaster-Integration und den Event-Import. */
   private final TicketmasterIntegrationService integrationService;
@@ -33,15 +35,27 @@ public class TicketmasterSyncScheduler implements ApplicationRunner {
   /** Publisher für Anwendungsereignisse. */
   private final ApplicationEventPublisher eventPublisher;
 
-  /** Führt die tägliche Ticketmaster-Synchronisation um 03:00 Uhr (Europe/Zurich) aus. */
-  @Scheduled(cron = "0 0 3 * * *", zone = "Europe/Zurich")
-  public void scheduledSync() {
-    log.info("Starting scheduled Ticketmaster sync");
+  /** Verhindert überlappende Ausführungen auf derselben Instanz. */
+  private final AtomicBoolean running = new AtomicBoolean(false);
+
+  /**
+   * Führt die Ticketmaster-Synchronisation asynchron im {@code jobExecutor} aus. Wird vom {@code
+   * InternalJobsController} aufgerufen.
+   */
+  @Async("jobExecutor")
+  public void runSync() {
+    if (!running.compareAndSet(false, true)) {
+      log.warn("Ticketmaster sync already running, skipping concurrent invocation");
+      return;
+    }
     try {
+      log.info("Starting scheduled Ticketmaster sync");
       integrationService.syncUpcomingEvents();
       eventPublisher.publishEvent(new TicketmasterSyncCompleteEvent(this));
     } catch (Exception e) {
       log.error("Scheduled Ticketmaster sync failed: {}", e.getMessage(), e);
+    } finally {
+      running.set(false);
     }
   }
 

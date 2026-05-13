@@ -2,16 +2,14 @@ package ch.loete.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Hauptklasse der Löte-Anwendung.
  *
- * <p>Startet die Spring-Boot-Applikation und aktiviert die zeitgesteuerte Aufgabenplanung
- * (Scheduling) für periodische Synchronisations- und Embedding-Jobs.
+ * <p>Startet die Spring-Boot-Applikation. Periodische Synchronisations- und Embedding-Jobs werden
+ * extern via Cloud Scheduler angestossen (siehe {@code InternalJobsController}).
  */
 @SpringBootApplication
-@EnableScheduling
 public class LoeteApplication {
 
   /**

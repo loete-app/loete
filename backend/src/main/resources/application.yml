@@ -48,6 +48,8 @@ app:
     similarity-threshold: 0.65
     embedding-batch-size: 50
     default-limit: 20
+  scheduler:
+    audience: ${SCHEDULER_AUDIENCE:loete-scheduler}
 
 springdoc:
   swagger-ui:
