@@ -7,6 +7,7 @@ import ch.loete.backend.config.JwtTokenProvider;
 import ch.loete.backend.domain.job.EmbeddingJob;
 import ch.loete.backend.domain.job.TicketmasterSyncJob;
 import ch.loete.backend.process.repository.UserRepository;
+import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,5 +47,19 @@ class InternalJobsControllerTest {
     mockMvc.perform(post("/internal/jobs/embeddings")).andExpect(status().isAccepted());
 
     Mockito.verify(embeddingJob).runEmbedding();
+  }
+
+  @Test
+  void triggerTicketmasterSync_returns202WhenExecutorRejects() throws Exception {
+    Mockito.doThrow(new RejectedExecutionException("busy")).when(ticketmasterSyncJob).runSync();
+
+    mockMvc.perform(post("/internal/jobs/ticketmaster-sync")).andExpect(status().isAccepted());
+  }
+
+  @Test
+  void triggerEmbeddings_returns202WhenExecutorRejects() throws Exception {
+    Mockito.doThrow(new RejectedExecutionException("busy")).when(embeddingJob).runEmbedding();
+
+    mockMvc.perform(post("/internal/jobs/embeddings")).andExpect(status().isAccepted());
   }
 }
