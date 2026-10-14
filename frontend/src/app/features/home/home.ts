@@ -1,12 +1,18 @@
 import { Component, inject, OnInit, signal } from "@angular/core";
+import { ActivatedRoute, Router } from "@angular/router";
 import { EventService } from "@/core/services/event.service";
-import { Event } from "@/core/models/event.model";
+import { FavoriteService } from "@/core/services/favorite.service";
+import { Event, EventFilter } from "@/core/models/event.model";
 import { EventCard } from "@/shared/components/event-card/event-card";
-import { LucideAngularModule, CalendarX2 } from "lucide-angular";
+import {
+  FilterBar,
+  FilterValues,
+} from "@/shared/components/filter-bar/filter-bar";
+import { LucideAngularModule, CalendarX2, AlertTriangle } from "lucide-angular";
 
 @Component({
   selector: "app-home",
-  imports: [EventCard, LucideAngularModule],
+  imports: [EventCard, FilterBar, LucideAngularModule],
   template: `
     <div class="page">
       <section class="hero">
@@ -16,15 +22,27 @@ import { LucideAngularModule, CalendarX2 } from "lucide-angular";
         </p>
       </section>
 
+      <app-filter-bar
+        [initial]="initialFilters()"
+        (filtersChange)="onFiltersChange($event)"
+      />
+
       @if (loading()) {
         <div class="loading">
           <p>Events werden geladen...</p>
+        </div>
+      } @else if (error()) {
+        <div class="error">
+          <i-lucide [img]="AlertIcon" [size]="40" class="error-icon" />
+          <h3>Events konnten nicht geladen werden</h3>
+          <p>{{ error() }}</p>
+          <button (click)="reload()">Erneut versuchen</button>
         </div>
       } @else if (events().length === 0) {
         <div class="empty">
           <i-lucide [img]="CalendarX2Icon" [size]="48" class="empty-icon" />
           <h3>Keine Events gefunden</h3>
-          <p>Schau später nochmal vorbei.</p>
+          <p>Passe deine Filter an oder schau später nochmal vorbei.</p>
         </div>
       } @else {
         <div class="grid">
@@ -54,7 +72,7 @@ import { LucideAngularModule, CalendarX2 } from "lucide-angular";
       padding: 2rem 1.5rem;
     }
     .hero {
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
     .hero h1 {
       font-size: 2rem;
@@ -91,31 +109,34 @@ import { LucideAngularModule, CalendarX2 } from "lucide-angular";
       padding: 6rem 0;
       color: var(--muted-foreground);
     }
-    .empty {
+    .empty,
+    .error {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
       padding: 6rem 0;
     }
-    .empty-icon {
+    .empty-icon,
+    .error-icon {
       color: var(--muted-foreground);
       margin-bottom: 1rem;
     }
-    .empty h3 {
+    .error-icon {
+      color: #ef4444;
+    }
+    .empty h3,
+    .error h3 {
       font-size: 1.25rem;
       margin: 0 0 0.25rem;
     }
-    .empty p {
+    .empty p,
+    .error p {
       color: var(--muted-foreground);
       font-size: 0.875rem;
-      margin: 0;
+      margin: 0 0 1rem;
     }
-    .load-more {
-      display: flex;
-      justify-content: center;
-      margin-top: 2rem;
-    }
+    .error button,
     .load-more button {
       background: var(--secondary);
       color: var(--foreground);
@@ -126,8 +147,14 @@ import { LucideAngularModule, CalendarX2 } from "lucide-angular";
       cursor: pointer;
       transition: background 0.15s;
     }
+    .error button:hover,
     .load-more button:hover:not(:disabled) {
       background: var(--accent);
+    }
+    .load-more {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
     }
     .load-more button:disabled {
       opacity: 0.5;
@@ -137,42 +164,117 @@ import { LucideAngularModule, CalendarX2 } from "lucide-angular";
 })
 export class Home implements OnInit {
   private eventService = inject(EventService);
+  private favoriteService = inject(FavoriteService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   readonly CalendarX2Icon = CalendarX2;
+  readonly AlertIcon = AlertTriangle;
 
   events = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
   lastPage = signal(false);
+  error = signal<string | null>(null);
+  initialFilters = signal<FilterValues | null>(null);
 
   private currentPage = 0;
+  private filters: FilterValues = {
+    search: "",
+    categoryId: null,
+    city: null,
+    dateFrom: null,
+    dateTo: null,
+  };
 
-  ngOnInit() {
+  ngOnInit(): void {
+    this.favoriteService.loadIds();
+
+    const qp = this.route.snapshot.queryParamMap;
+    this.filters = {
+      search: qp.get("search") ?? "",
+      categoryId: qp.get("categoryId") ? Number(qp.get("categoryId")) : null,
+      city: qp.get("city"),
+      dateFrom: qp.get("dateFrom"),
+      dateTo: qp.get("dateTo"),
+    };
+    this.initialFilters.set({ ...this.filters });
+
     this.loadEvents();
   }
 
-  loadMore() {
-    this.currentPage++;
-    this.loadingMore.set(true);
-    this.eventService.getEvents({ page: this.currentPage }).subscribe({
-      next: (response) => {
-        this.events.update((prev) => [...prev, ...response.content]);
-        this.lastPage.set(response.last);
-        this.loadingMore.set(false);
-      },
-      error: () => this.loadingMore.set(false),
-    });
+  onFiltersChange(values: FilterValues): void {
+    this.filters = values;
+    this.currentPage = 0;
+    this.syncQueryParams();
+    this.loadEvents();
   }
 
-  private loadEvents() {
+  loadMore(): void {
+    this.currentPage++;
+    this.loadingMore.set(true);
+    this.eventService
+      .getEvents({ ...this.toApiFilter(), page: this.currentPage })
+      .subscribe({
+        next: (res) => {
+          this.events.update((prev) => [...prev, ...res.content]);
+          this.lastPage.set(res.last);
+          this.loadingMore.set(false);
+        },
+        error: () => this.loadingMore.set(false),
+      });
+  }
+
+  reload(): void {
+    this.currentPage = 0;
+    this.loadEvents();
+  }
+
+  private loadEvents(): void {
     this.loading.set(true);
-    this.eventService.getEvents({ page: this.currentPage }).subscribe({
-      next: (response) => {
-        this.events.set(response.content);
-        this.lastPage.set(response.last);
-        this.loading.set(false);
+    this.error.set(null);
+    this.eventService
+      .getEvents({ ...this.toApiFilter(), page: this.currentPage })
+      .subscribe({
+        next: (res) => {
+          this.events.set(res.content);
+          this.lastPage.set(res.last);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.events.set([]);
+          this.error.set(
+            "Wir konnten gerade keine Events laden. Bitte versuche es in wenigen Augenblicken erneut.",
+          );
+          this.loading.set(false);
+        },
+      });
+  }
+
+  private toApiFilter(): EventFilter {
+    return {
+      search: this.filters.search || null,
+      categoryId: this.filters.categoryId,
+      city: this.filters.city,
+      dateFrom: this.filters.dateFrom
+        ? `${this.filters.dateFrom}T00:00:00`
+        : null,
+      dateTo: this.filters.dateTo ? `${this.filters.dateTo}T23:59:59` : null,
+    };
+  }
+
+  private syncQueryParams(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        search: this.filters.search || null,
+        categoryId: this.filters.categoryId ?? null,
+        city: this.filters.city || null,
+        dateFrom: this.filters.dateFrom || null,
+        dateTo: this.filters.dateTo || null,
       },
-      error: () => this.loading.set(false),
+      queryParamsHandling: "merge",
+      replaceUrl: true,
     });
   }
 }
