@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -21,6 +22,16 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex) {
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body(new ErrorResponse(409, ex.getMessage(), Instant.now()));
+  }
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex) {
+    HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+    return ResponseEntity.status(status)
+        .body(
+            new ErrorResponse(
+                status.value(), ex.getReason() != null ? ex.getReason() : status.getReasonPhrase(),
+                Instant.now()));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
