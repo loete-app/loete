@@ -31,6 +31,9 @@ server:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+  ticketmaster:
+    api-key: ${TICKETMASTER_API_KEY:}
+    base-url: https://app.ticketmaster.com/discovery/v2
 
 springdoc:
   swagger-ui:

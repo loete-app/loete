@@ -1,84 +1,178 @@
 import { Component, inject, OnInit, signal } from "@angular/core";
-import { ItemService } from "@/core/services/item.service";
-import { SampleItem, ItemCategory, Priority } from "@/core/models/item.model";
-import { ItemCard } from "@/shared/components/item-card/item-card";
-import {
-  FilterBar,
-  FilterChange,
-} from "@/shared/components/filter-bar/filter-bar";
+import { EventService } from "@/core/services/event.service";
+import { Event } from "@/core/models/event.model";
+import { EventCard } from "@/shared/components/event-card/event-card";
+import { LucideAngularModule, CalendarX2 } from "lucide-angular";
 
 @Component({
   selector: "app-home",
-  imports: [ItemCard, FilterBar],
+  imports: [EventCard, LucideAngularModule],
   template: `
-    <section class="page">
-      <h1>Items</h1>
-      <app-filter-bar (filterChange)="onFilter($event)" />
+    <div class="page">
+      <section class="hero">
+        <h1>Entdecke Events</h1>
+        <p class="subtitle">
+          Finde Konzerte, Sport, Theater und mehr in deiner Nähe.
+        </p>
+      </section>
 
       @if (loading()) {
-        <p class="muted">Loading...</p>
-      } @else if (items().length) {
-        <div class="grid">
-          @for (item of items(); track item.id) {
-            <app-item-card [item]="item" />
-          }
+        <div class="loading">
+          <p>Events werden geladen...</p>
+        </div>
+      } @else if (events().length === 0) {
+        <div class="empty">
+          <i-lucide [img]="CalendarX2Icon" [size]="48" class="empty-icon" />
+          <h3>Keine Events gefunden</h3>
+          <p>Schau später nochmal vorbei.</p>
         </div>
       } @else {
-        <p class="muted">No items found.</p>
+        <div class="grid">
+          @for (event of events(); track event.id) {
+            <app-event-card
+              [event]="event"
+              class="animate-fade-in-up"
+              [style.animation-delay]="$index * 50 + 'ms'"
+            />
+          }
+        </div>
+
+        @if (!lastPage()) {
+          <div class="load-more">
+            <button (click)="loadMore()" [disabled]="loadingMore()">
+              {{ loadingMore() ? "Laden..." : "Mehr Events laden" }}
+            </button>
+          </div>
+        }
       }
-    </section>
+    </div>
   `,
   styles: `
     .page {
-      max-width: 720px;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 2rem 1.5rem;
     }
-    h1 {
-      margin-bottom: 1.5rem;
+    .hero {
+      margin-bottom: 2rem;
+    }
+    .hero h1 {
+      font-size: 2rem;
+      margin: 0 0 0.5rem;
+    }
+    .subtitle {
+      color: var(--muted-foreground);
+      font-size: 1rem;
+      margin: 0;
     }
     .grid {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 1.5rem;
+    }
+    @media (min-width: 640px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (min-width: 1024px) {
+      .grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (min-width: 1280px) {
+      .grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .loading {
+      display: flex;
+      justify-content: center;
+      padding: 6rem 0;
+      color: var(--muted-foreground);
+    }
+    .empty {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      align-items: center;
+      text-align: center;
+      padding: 6rem 0;
     }
-    .muted {
+    .empty-icon {
       color: var(--muted-foreground);
+      margin-bottom: 1rem;
+    }
+    .empty h3 {
+      font-size: 1.25rem;
+      margin: 0 0 0.25rem;
+    }
+    .empty p {
+      color: var(--muted-foreground);
+      font-size: 0.875rem;
+      margin: 0;
+    }
+    .load-more {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    .load-more button {
+      background: var(--secondary);
+      color: var(--foreground);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.625rem 1.5rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .load-more button:hover:not(:disabled) {
+      background: var(--accent);
+    }
+    .load-more button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   `,
 })
 export class Home implements OnInit {
-  private itemService = inject(ItemService);
+  private eventService = inject(EventService);
 
-  items = signal<SampleItem[]>([]);
+  readonly CalendarX2Icon = CalendarX2;
+
+  events = signal<Event[]>([]);
   loading = signal(true);
+  loadingMore = signal(false);
+  lastPage = signal(false);
 
-  private currentCategory: ItemCategory | undefined;
-  private currentPriority: Priority | undefined;
+  private currentPage = 0;
 
   ngOnInit() {
-    this.load();
+    this.loadEvents();
   }
 
-  onFilter(filters: FilterChange) {
-    this.currentCategory = filters.category;
-    this.currentPriority = filters.priority;
-    this.load();
+  loadMore() {
+    this.currentPage++;
+    this.loadingMore.set(true);
+    this.eventService.getEvents({ page: this.currentPage }).subscribe({
+      next: (response) => {
+        this.events.update((prev) => [...prev, ...response.content]);
+        this.lastPage.set(response.last);
+        this.loadingMore.set(false);
+      },
+      error: () => this.loadingMore.set(false),
+    });
   }
 
-  private load() {
+  private loadEvents() {
     this.loading.set(true);
-    this.itemService
-      .getItems({
-        category: this.currentCategory,
-        priority: this.currentPriority,
-      })
-      .subscribe({
-        next: (data) => {
-          this.items.set(data);
-          this.loading.set(false);
-        },
-        error: () => this.loading.set(false),
-      });
+    this.eventService.getEvents({ page: this.currentPage }).subscribe({
+      next: (response) => {
+        this.events.set(response.content);
+        this.lastPage.set(response.last);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
   }
 }
