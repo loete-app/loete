@@ -1,51 +1,77 @@
-import { Component, input } from "@angular/core";
+import { Component, inject, input, signal } from "@angular/core";
 import { DatePipe } from "@angular/common";
+import { RouterLink } from "@angular/router";
 import { Event } from "@/core/models/event.model";
-import { LucideAngularModule, Calendar, MapPin } from "lucide-angular";
+import { FavoriteService } from "@/core/services/favorite.service";
+import { LucideAngularModule, Calendar, MapPin, Heart } from "lucide-angular";
 
 @Component({
   selector: "app-event-card",
-  imports: [DatePipe, LucideAngularModule],
+  imports: [DatePipe, RouterLink, LucideAngularModule],
   template: `
-    <div class="card">
-      <div class="image-wrapper">
-        <img
-          [src]="event().imageUrl || fallbackImage"
-          [alt]="event().name"
-          (error)="onImageError($event)"
-          loading="lazy"
-        />
-        @if (event().categoryName) {
-          <span class="badge">{{ event().categoryName }}</span>
-        }
-      </div>
-      <div class="body">
-        <h3>{{ event().name }}</h3>
-        <div class="meta">
-          <span class="meta-item">
-            <i-lucide [img]="CalendarIcon" [size]="14" />
-            {{ event().startDate | date: "d. MMM y" }}
-          </span>
-          @if (event().city) {
-            <span class="meta-item">
-              <i-lucide [img]="MapPinIcon" [size]="14" />
-              {{ event().city }}
-            </span>
+    <article class="card">
+      <a [routerLink]="['/events', event().id]" class="card-link">
+        <div class="image-wrapper">
+          <img
+            [src]="event().imageUrl || fallbackImage"
+            [alt]="event().name"
+            (error)="onImageError($event)"
+            loading="lazy"
+          />
+          @if (event().categoryName) {
+            <span class="badge">{{ event().categoryName }}</span>
           }
         </div>
-      </div>
-    </div>
+        <div class="body">
+          <h3>{{ event().name }}</h3>
+          <div class="meta">
+            <span class="meta-item">
+              <i-lucide [img]="CalendarIcon" [size]="14" />
+              {{ event().startDate | date: "d. MMM y" }}
+            </span>
+            @if (event().city) {
+              <span class="meta-item">
+                <i-lucide [img]="MapPinIcon" [size]="14" />
+                {{ event().city }}
+              </span>
+            }
+          </div>
+        </div>
+      </a>
+      <button
+        type="button"
+        class="fav-btn"
+        [class.active]="isFavorite()"
+        [disabled]="busy()"
+        (click)="toggleFavorite($event)"
+        [attr.aria-label]="
+          isFavorite() ? 'Aus Favoriten entfernen' : 'Als Favorit speichern'
+        "
+        [attr.aria-pressed]="isFavorite()"
+      >
+        <i-lucide
+          [img]="HeartIcon"
+          [size]="16"
+          [attr.fill]="isFavorite() ? 'currentColor' : 'none'"
+        />
+      </button>
+    </article>
   `,
   styles: `
     .card {
+      position: relative;
       display: block;
       overflow: hidden;
       border-radius: var(--radius);
       border: 1px solid var(--border);
       background: var(--card);
       color: var(--card-foreground);
-      text-decoration: none;
       transition: all 0.3s;
+    }
+    .card-link {
+      display: block;
+      color: inherit;
+      text-decoration: none;
     }
     .card:hover {
       transform: translateY(-4px);
@@ -106,15 +132,71 @@ import { LucideAngularModule, Calendar, MapPin } from "lucide-angular";
       color: color-mix(in srgb, var(--primary) 70%, transparent);
       flex-shrink: 0;
     }
+    .fav-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      border: none;
+      background: rgba(0, 0, 0, 0.55);
+      color: white;
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+      transition:
+        transform 0.15s,
+        background 0.15s,
+        color 0.15s;
+    }
+    .fav-btn:hover:not(:disabled) {
+      transform: scale(1.08);
+    }
+    .fav-btn.active {
+      color: #ef4444;
+    }
+    .fav-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   `,
 })
 export class EventCard {
   event = input.required<Event>();
 
+  private favoriteService = inject(FavoriteService);
+
   readonly CalendarIcon = Calendar;
   readonly MapPinIcon = MapPin;
+  readonly HeartIcon = Heart;
   readonly fallbackImage =
     "https://placehold.co/400x250/1a1a2e/e0e0e0?text=Kein+Bild";
+
+  busy = signal(false);
+
+  isFavorite(): boolean {
+    return this.favoriteService.favoriteIds().has(this.event().id);
+  }
+
+  toggleFavorite(ev: MouseEvent): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (this.busy()) return;
+    this.busy.set(true);
+
+    const id = this.event().id;
+    const done = () => this.busy.set(false);
+    const handlers = { next: done, error: done };
+
+    if (this.isFavorite()) {
+      this.favoriteService.removeFavorite(id).subscribe(handlers);
+    } else {
+      this.favoriteService.addFavorite(id).subscribe(handlers);
+    }
+  }
 
   onImageError(event: globalThis.Event): void {
     const img = event.target as HTMLImageElement;
