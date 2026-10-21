@@ -30,7 +30,8 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(status)
         .body(
             new ErrorResponse(
-                status.value(), ex.getReason() != null ? ex.getReason() : status.getReasonPhrase(),
+                status.value(),
+                ex.getReason() != null ? ex.getReason() : status.getReasonPhrase(),
                 Instant.now()));
   }
 

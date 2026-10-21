@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LocationController {
 
-    private final LocationService locationService;
+  private final LocationService locationService;
 
-    @GetMapping("/cities")
-    public ResponseEntity<List<String>> getCities() {
-        return ResponseEntity.ok(locationService.getCities());
-    }
+  @GetMapping("/cities")
+  public ResponseEntity<List<String>> getCities() {
+    return ResponseEntity.ok(locationService.getCities());
+  }
 }

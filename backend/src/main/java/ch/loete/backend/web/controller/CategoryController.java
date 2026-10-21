@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CategoryController {
 
-    private final CategoryService categoryService;
+  private final CategoryService categoryService;
 
-    @GetMapping
-    public ResponseEntity<List<CategoryResponse>> getCategories() {
-        return ResponseEntity.ok(categoryService.getCategories());
-    }
+  @GetMapping
+  public ResponseEntity<List<CategoryResponse>> getCategories() {
+    return ResponseEntity.ok(categoryService.getCategories());
+  }
 }

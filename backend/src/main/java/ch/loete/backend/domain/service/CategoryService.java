@@ -11,12 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CategoryService {
 
-    private final CategoryRepository categoryRepository;
+  private final CategoryRepository categoryRepository;
 
-    @Transactional(readOnly = true)
-    public List<CategoryResponse> getCategories() {
-        return categoryRepository.findAllByOrderByNameAsc().stream()
-                .map(c -> new CategoryResponse(c.getId(), c.getName(), c.getSlug()))
-                .toList();
-    }
+  @Transactional(readOnly = true)
+  public List<CategoryResponse> getCategories() {
+    return categoryRepository.findAllByOrderByNameAsc().stream()
+        .map(c -> new CategoryResponse(c.getId(), c.getName(), c.getSlug()))
+        .toList();
+  }
 }

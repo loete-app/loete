@@ -23,29 +23,29 @@ import org.hibernate.annotations.CreationTimestamp;
 @AllArgsConstructor
 @Entity
 @Table(
-        name = "favorites",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"client_id", "event_id"}))
+    name = "favorites",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"client_id", "event_id"}))
 public class Favorite {
 
-    @Id
-    @Column(length = 8)
-    private String id;
+  @Id
+  @Column(length = 8)
+  private String id;
 
-    @Column(name = "client_id", nullable = false, length = 64)
-    private String clientId;
+  @Column(name = "client_id", nullable = false, length = 64)
+  private String clientId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "event_id", nullable = false)
-    private Event event;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "event_id", nullable = false)
+  private Event event;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private Instant createdAt;
+  @CreationTimestamp
+  @Column(name = "created_at", updatable = false)
+  private Instant createdAt;
 
-    @PrePersist
-    public void prePersist() {
-        if (this.id == null) {
-            this.id = NanoIdGenerator.generate();
-        }
+  @PrePersist
+  public void prePersist() {
+    if (this.id == null) {
+      this.id = NanoIdGenerator.generate();
     }
+  }
 }

@@ -10,10 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LocationService {
 
-    private final LocationRepository locationRepository;
+  private final LocationRepository locationRepository;
 
-    @Transactional(readOnly = true)
-    public List<String> getCities() {
-        return locationRepository.findDistinctCitiesWithEvents();
-    }
+  @Transactional(readOnly = true)
+  public List<String> getCities() {
+    return locationRepository.findDistinctCitiesWithEvents();
+  }
 }

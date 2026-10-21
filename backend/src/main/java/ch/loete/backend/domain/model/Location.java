@@ -19,20 +19,20 @@ import lombok.NoArgsConstructor;
 @Table(name = "locations")
 public class Location {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(nullable = false)
-    private String name;
+  @Column(nullable = false)
+  private String name;
 
-    private String city;
+  private String city;
 
-    @Builder.Default
-    @Column(name = "country")
-    private String country = "CH";
+  @Builder.Default
+  @Column(name = "country")
+  private String country = "CH";
 
-    private Double latitude;
+  private Double latitude;
 
-    private Double longitude;
+  private Double longitude;
 }

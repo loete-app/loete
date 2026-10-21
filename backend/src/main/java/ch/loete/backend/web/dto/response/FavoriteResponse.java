@@ -4,12 +4,12 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 
 public record FavoriteResponse(
-        String id,
-        String eventId,
-        String name,
-        String imageUrl,
-        LocalDateTime startDate,
-        String categoryName,
-        String locationName,
-        String city,
-        Instant createdAt) {}
+    String id,
+    String eventId,
+    String name,
+    String imageUrl,
+    LocalDateTime startDate,
+    String categoryName,
+    String locationName,
+    String city,
+    Instant createdAt) {}
