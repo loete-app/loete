@@ -10,7 +10,7 @@ locals {
     "database-url"      = var.database_url
     "database-username" = var.database_username
     "database-password" = var.database_password
-    "cors-origins"      = var.cors_origins
+    "cors-origins"      = var.cors_origins != "" ? var.cors_origins : "*"
   }
 
   all_secrets = merge(local.placeholder_secrets, local.computed_secrets)

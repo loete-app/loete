@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGION: europe-west6
+  REGION: europe-west1
   BACKEND_SERVICE: loete-backend
   FRONTEND_SERVICE: loete-frontend
   AR_REPO: loete
