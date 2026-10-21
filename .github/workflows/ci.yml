@@ -119,6 +119,10 @@ jobs:
       id-token: write
     outputs:
       backend_url: ${{ steps.backend-url.outputs.url }}
+      backend_image: ${{ steps.backend-image.outputs.image }}
+      backend_digest: ${{ steps.backend-image.outputs.digest }}
+      frontend_image: ${{ steps.frontend-image.outputs.image }}
+      frontend_digest: ${{ steps.frontend-image.outputs.digest }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -150,6 +154,7 @@ jobs:
           fi
 
       - name: Build and push backend image
+        id: backend-image
         env:
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           COMMIT_SHA: ${{ github.sha }}
@@ -160,8 +165,12 @@ jobs:
             -t "${IMAGE_BASE}:${COMMIT_SHA}" \
             -t "${IMAGE_BASE}:latest" .
           docker push --all-tags "${IMAGE_BASE}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${COMMIT_SHA}" | cut -d'@' -f2)
+          echo "image=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push frontend image
+        id: frontend-image
         env:
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           COMMIT_SHA: ${{ github.sha }}
@@ -174,9 +183,90 @@ jobs:
             -t "${IMAGE_BASE}:${COMMIT_SHA}" \
             -t "${IMAGE_BASE}:latest" .
           docker push --all-tags "${IMAGE_BASE}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${COMMIT_SHA}" | cut -d'@' -f2)
+          echo "image=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+  migrate:
+    name: DB migrations (Flyway)
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CLOUD_SQL_INSTANCE: loete-db
+      CLOUD_SQL_PROXY_VERSION: "2.15.2"
+      FLYWAY_VERSION: "11.0.1"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Resolve Cloud SQL connection name
+        id: sql
+        run: |
+          CONN=$(gcloud sql instances describe "$CLOUD_SQL_INSTANCE" --format='value(connectionName)')
+          echo "connection=$CONN" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch DB credentials from Secret Manager
+        id: creds
+        run: |
+          DB_USER=$(gcloud secrets versions access latest --secret=loete-database-username)
+          DB_PASS=$(gcloud secrets versions access latest --secret=loete-database-password)
+          echo "::add-mask::$DB_USER"
+          echo "::add-mask::$DB_PASS"
+          echo "user=$DB_USER" >> "$GITHUB_OUTPUT"
+          echo "pass=$DB_PASS" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cloud SQL Auth Proxy
+        run: |
+          curl -sfL -o cloud-sql-proxy \
+            "https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v${CLOUD_SQL_PROXY_VERSION}/cloud-sql-proxy.linux.amd64"
+          chmod +x cloud-sql-proxy
+
+      - name: Start Cloud SQL Auth Proxy
+        env:
+          CONN: ${{ steps.sql.outputs.connection }}
+        run: |
+          ./cloud-sql-proxy "$CONN" --port=5432 &
+          for i in $(seq 1 10); do
+            (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+      - name: Install Flyway CLI
+        run: |
+          curl -sfL -o flyway.tar.gz \
+            "https://github.com/flyway/flyway/releases/download/flyway-${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz"
+          mkdir -p flyway && tar -xzf flyway.tar.gz -C flyway --strip-components=1
+
+      - name: Flyway info (current state)
+        env:
+          FLYWAY_URL: "jdbc:postgresql://127.0.0.1:5432/loete"
+          FLYWAY_USER: ${{ steps.creds.outputs.user }}
+          FLYWAY_PASSWORD: ${{ steps.creds.outputs.pass }}
+          FLYWAY_LOCATIONS: "filesystem:backend/src/main/resources/db/migration"
+          FLYWAY_BASELINE_ON_MIGRATE: "true"
+        run: ./flyway/flyway info
+
+      - name: Flyway migrate
+        env:
+          FLYWAY_URL: "jdbc:postgresql://127.0.0.1:5432/loete"
+          FLYWAY_USER: ${{ steps.creds.outputs.user }}
+          FLYWAY_PASSWORD: ${{ steps.creds.outputs.pass }}
+          FLYWAY_LOCATIONS: "filesystem:backend/src/main/resources/db/migration"
+          FLYWAY_BASELINE_ON_MIGRATE: "true"
+        run: ./flyway/flyway migrate
 
   deploy:
-    needs: build-push
+    needs: migrate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -269,3 +359,220 @@ jobs:
       - name: Tofu apply
         working-directory: infra
         run: tofu apply -auto-approve -var-file=production.tfvars
+
+  # ── Security: Shift-Left ─────────────────────────────────────────────
+
+  security-sast:
+    name: SAST (CodeQL)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
+
+      - name: Build backend for CodeQL
+        if: matrix.language == 'java-kotlin'
+        working-directory: backend
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests package
+
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  security-secrets:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  security-deps:
+    name: Dependency scanning (OSV-Scanner)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: google/osv-scanner-action/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
+        with:
+          scan-args: |-
+            --recursive
+            --lockfile=frontend/pnpm-lock.yaml
+            --lockfile=backend/pom.xml
+            --format=sarif
+            --output=osv-results.sarif
+        continue-on-error: true
+
+      - uses: github/codeql-action/upload-sarif@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        if: always()
+        with:
+          sarif_file: osv-results.sarif
+          category: osv-scanner
+
+  security-iac:
+    name: IaC scanning (tfsec)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: aquasecurity/tfsec-sarif-action@21ded20e8ca120cd9d3d6ab04ef746477542a608 # v0.1.4
+        with:
+          working_directory: infra
+          sarif_file: tfsec-results.sarif
+
+      - uses: github/codeql-action/upload-sarif@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        if: always()
+        with:
+          sarif_file: tfsec-results.sarif
+          category: tfsec
+
+  security-dockerfiles:
+    name: Dockerfile lint (hadolint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: [backend/Dockerfile, frontend/Dockerfile]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          format: sarif
+          output-file: hadolint-${{ strategy.job-index }}.sarif
+          no-fail: true
+
+      - uses: github/codeql-action/upload-sarif@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        if: always()
+        with:
+          sarif_file: hadolint-${{ strategy.job-index }}.sarif
+          category: hadolint-${{ strategy.job-index }}
+
+  # ── Security: Build-time (after images pushed) ──────────────────────
+
+  security-containers:
+    name: Container scan (Trivy)
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ matrix.component == 'backend' && needs.build-push.outputs.backend_image || needs.build-push.outputs.frontend_image }}:${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.component }}.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
+      - uses: github/codeql-action/upload-sarif@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.component }}.sarif
+          category: trivy-${{ matrix.component }}
+
+  security-supply-chain:
+    name: SBOM + sign + provenance
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Resolve image refs
+        id: refs
+        env:
+          IMAGE: ${{ matrix.component == 'backend' && needs.build-push.outputs.backend_image || needs.build-push.outputs.frontend_image }}
+          DIGEST: ${{ matrix.component == 'backend' && needs.build-push.outputs.backend_digest || needs.build-push.outputs.frontend_digest }}
+        run: |
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "ref=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SBOM (syft)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ steps.refs.outputs.ref }}
+          format: spdx-json
+          artifact-name: sbom-${{ matrix.component }}-${{ github.sha }}.spdx.json
+          upload-artifact: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Cosign keyless sign
+        env:
+          IMAGE_REF: ${{ steps.refs.outputs.ref }}
+        run: cosign sign --yes "$IMAGE_REF"
+
+      - name: Attest SLSA build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ steps.refs.outputs.image }}
+          subject-digest: ${{ steps.refs.outputs.digest }}
+          push-to-registry: true
