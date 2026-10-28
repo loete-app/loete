@@ -21,7 +21,7 @@ module "secrets" {
 
   project_id = var.project_id
 
-  database_url      = "jdbc:postgresql:///${module.cloud_sql.database}?host=/cloudsql/${module.cloud_sql.connection_name}"
+  database_url      = "jdbc:postgresql:///${module.cloud_sql.database}?cloudSqlInstance=${module.cloud_sql.connection_name}&socketFactory=com.google.cloud.sql.postgres.SocketFactory"
   database_username = module.cloud_sql.user
   database_password = module.cloud_sql.password
   cors_origins      = var.cors_origins
