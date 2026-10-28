@@ -8,6 +8,9 @@ import ch.loete.backend.web.dto.request.EventFilterRequest;
 import ch.loete.backend.web.dto.response.EventDetailResponse;
 import ch.loete.backend.web.dto.response.EventResponse;
 import ch.loete.backend.web.dto.response.PagedResponse;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,13 +28,16 @@ public class EventService {
 
   @Transactional(readOnly = true)
   public PagedResponse<EventResponse> getEvents(EventFilterRequest filter) {
-    Specification<Event> spec =
-        Specification.allOf(
-            EventSpecifications.hasCategory(filter.categoryId()),
-            EventSpecifications.inCity(filter.city()),
-            EventSpecifications.startsAfter(filter.dateFrom()),
-            EventSpecifications.startsBefore(filter.dateTo()),
-            EventSpecifications.nameContains(filter.search()));
+    List<Specification<Event>> specs =
+        Stream.of(
+                EventSpecifications.hasCategory(filter.categoryId()),
+                EventSpecifications.inCity(filter.city()),
+                EventSpecifications.startsAfter(filter.dateFrom()),
+                EventSpecifications.startsBefore(filter.dateTo()),
+                EventSpecifications.nameContains(filter.search()))
+            .filter(Objects::nonNull)
+            .toList();
+    Specification<Event> spec = specs.isEmpty() ? null : Specification.allOf(specs);
 
     Page<Event> result =
         eventRepository.findAll(

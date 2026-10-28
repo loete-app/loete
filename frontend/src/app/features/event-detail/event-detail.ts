@@ -3,6 +3,7 @@ import { DatePipe, Location } from "@angular/common";
 import { ActivatedRoute } from "@angular/router";
 import { EventService } from "@/core/services/event.service";
 import { FavoriteService } from "@/core/services/favorite.service";
+import { SeoService } from "@/core/services/seo.service";
 import { EventDetail } from "@/core/models/event.model";
 import {
   LucideAngularModule,
@@ -280,6 +281,7 @@ export class EventDetailPage implements OnInit {
   private location = inject(Location);
   private eventService = inject(EventService);
   private favoriteService = inject(FavoriteService);
+  private seo = inject(SeoService);
 
   event = signal<EventDetail | null>(null);
   loading = signal(true);
@@ -296,6 +298,7 @@ export class EventDetailPage implements OnInit {
     "https://placehold.co/960x500/1a1a2e/e0e0e0?text=Kein+Bild";
 
   ngOnInit(): void {
+    this.seo.set("Event-Details", "Event-Details auf Löte.");
     this.favoriteService.loadIds();
     this.route.paramMap.subscribe((params) => {
       const id = params.get("id");
@@ -348,12 +351,17 @@ export class EventDetailPage implements OnInit {
       next: (ev) => {
         this.event.set(ev);
         this.loading.set(false);
+        const desc = ev.description?.trim()
+          ? ev.description.trim().slice(0, 160)
+          : `${ev.name}${ev.city ? ` – ${ev.city}` : ""}. Tickets und Details auf Löte.`;
+        this.seo.set(ev.name, desc);
         window.scrollTo({ top: 0 });
       },
       error: (err) => {
         this.loading.set(false);
         if (err?.status === 404) {
           this.error.set("Dieses Event existiert nicht (mehr).");
+          this.seo.set("Event nicht gefunden", "Dieses Event existiert nicht.");
         } else {
           this.error.set(
             "Wir konnten dieses Event gerade nicht laden. Bitte versuche es später erneut.",

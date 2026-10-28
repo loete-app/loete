@@ -1,13 +1,17 @@
 package ch.loete.backend.process.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -18,6 +22,7 @@ public class TicketmasterClient {
 
   private final RestClient restClient;
   private final String apiKey;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   public record TicketmasterEvent(
       String id,
@@ -40,32 +45,78 @@ public class TicketmasterClient {
     this.restClient = RestClient.builder().baseUrl(baseUrl).build();
   }
 
-  public List<TicketmasterEvent> fetchEvents() {
+  private static final int PAGE_SIZE = 200;
+
+  /**
+   * Fetches events from Ticketmaster within the given UTC window, up to {@code maxResults}.
+   * Pages through results (size=200, the API max). Returns whatever it managed to fetch — failures
+   * on a single page are logged and the partial result is returned.
+   */
+  public List<TicketmasterEvent> fetchUpcomingEvents(
+      Instant startDateTime, Instant endDateTime, int maxResults) {
     if (!StringUtils.hasText(apiKey)) {
       log.warn("Ticketmaster API key is not configured. Skipping event fetch.");
       return Collections.emptyList();
     }
 
-    try {
-      JsonNode response =
-          restClient
-              .get()
-              .uri(
-                  uriBuilder ->
-                      uriBuilder
-                          .path("/events.json")
-                          .queryParam("apikey", apiKey)
-                          .queryParam("countryCode", "CH")
-                          .queryParam("size", "50")
-                          .build())
-              .retrieve()
-              .body(JsonNode.class);
+    String start =
+        DateTimeFormatter.ISO_INSTANT.format(startDateTime.truncatedTo(ChronoUnit.SECONDS));
+    String end =
+        DateTimeFormatter.ISO_INSTANT.format(endDateTime.truncatedTo(ChronoUnit.SECONDS));
 
-      return parseEvents(response);
-    } catch (Exception e) {
-      log.error("Failed to fetch events from Ticketmaster: {}", e.getMessage(), e);
-      return Collections.emptyList();
+    List<TicketmasterEvent> all = new ArrayList<>();
+    int page = 0;
+
+    while (all.size() < maxResults) {
+      final int currentPage = page;
+      try {
+        String body =
+            restClient
+                .get()
+                .uri(
+                    uriBuilder ->
+                        uriBuilder
+                            .path("/events.json")
+                            .queryParam("apikey", apiKey)
+                            .queryParam("countryCode", "CH")
+                            .queryParam("startDateTime", start)
+                            .queryParam("endDateTime", end)
+                            .queryParam("size", String.valueOf(PAGE_SIZE))
+                            .queryParam("page", String.valueOf(currentPage))
+                            .build())
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(String.class);
+
+        if (body == null || body.isBlank()) {
+          log.warn("Ticketmaster returned empty body for page {}", currentPage);
+          break;
+        }
+
+        JsonNode response = objectMapper.readTree(body);
+
+        List<TicketmasterEvent> pageEvents = parseEvents(response);
+        if (pageEvents.isEmpty()) {
+          break;
+        }
+        all.addAll(pageEvents);
+
+        int totalPages = response.path("page").path("totalPages").asInt(0);
+        if (currentPage + 1 >= totalPages) {
+          break;
+        }
+        page++;
+      } catch (Exception e) {
+        log.error(
+            "Failed to fetch Ticketmaster events page {}: {}. Returning {} events fetched so far.",
+            currentPage,
+            e.getMessage(),
+            all.size());
+        break;
+      }
     }
+
+    return all.size() > maxResults ? all.subList(0, maxResults) : all;
   }
 
   private List<TicketmasterEvent> parseEvents(JsonNode response) {

@@ -8,6 +8,10 @@ import ch.loete.backend.process.client.TicketmasterClient.TicketmasterEvent;
 import ch.loete.backend.process.repository.CategoryRepository;
 import ch.loete.backend.process.repository.EventRepository;
 import ch.loete.backend.process.repository.LocationRepository;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,12 +28,36 @@ public class TicketmasterIntegrationService {
   private final CategoryRepository categoryRepository;
   private final LocationRepository locationRepository;
 
+  private static final int MAX_EVENTS_PER_SYNC = 1000;
+  private static final int LOOKAHEAD_DAYS = 90;
+
+  /**
+   * Deletes past events, then fetches up to {@value #MAX_EVENTS_PER_SYNC} Swiss events starting in
+   * the next {@value #LOOKAHEAD_DAYS} days from Ticketmaster and upserts them by external_id.
+   */
   @Transactional
-  public int syncEvents() {
-    List<TicketmasterEvent> tmEvents = ticketmasterClient.fetchEvents();
+  public int syncUpcomingEvents() {
+    LocalDateTime now = LocalDateTime.now();
+    int deleted = eventRepository.deleteByStartDateBefore(now);
+    if (deleted > 0) {
+      log.info("Deleted {} past events", deleted);
+    }
+
+    Instant from = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+    Instant to = from.plus(LOOKAHEAD_DAYS, ChronoUnit.DAYS);
+
+    List<TicketmasterEvent> tmEvents =
+        ticketmasterClient.fetchUpcomingEvents(from, to, MAX_EVENTS_PER_SYNC);
+
+    LocalDateTime windowEnd = LocalDateTime.ofInstant(to, ZoneOffset.UTC);
 
     int count = 0;
     for (TicketmasterEvent tmEvent : tmEvents) {
+      if (tmEvent.startDate() == null
+          || tmEvent.startDate().isBefore(now)
+          || tmEvent.startDate().isAfter(windowEnd)) {
+        continue;
+      }
       try {
         upsertEvent(tmEvent);
         count++;
@@ -42,7 +70,7 @@ public class TicketmasterIntegrationService {
       }
     }
 
-    log.info("Synced {} events from Ticketmaster", count);
+    log.info("Synced {} events from Ticketmaster (window {} → {})", count, now, windowEnd);
     return count;
   }
 
