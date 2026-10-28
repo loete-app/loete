@@ -1,0 +1,86 @@
+name: DB migrations (Flyway)
+
+on:
+  workflow_call:
+    secrets:
+      GCP_WIF_PROVIDER:
+        required: true
+      GCP_SA_EMAIL:
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CLOUD_SQL_INSTANCE: loete-db
+      CLOUD_SQL_PROXY_VERSION: "2.15.2"
+      FLYWAY_VERSION: "12.4.0"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Resolve Cloud SQL connection name
+        id: sql
+        run: |
+          CONN=$(gcloud sql instances describe "$CLOUD_SQL_INSTANCE" --format='value(connectionName)')
+          echo "connection=$CONN" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch DB credentials from Secret Manager
+        id: creds
+        run: |
+          DB_USER=$(gcloud secrets versions access latest --secret=loete-database-username)
+          DB_PASS=$(gcloud secrets versions access latest --secret=loete-database-password)
+          echo "::add-mask::$DB_USER"
+          echo "::add-mask::$DB_PASS"
+          echo "user=$DB_USER" >> "$GITHUB_OUTPUT"
+          echo "pass=$DB_PASS" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cloud SQL Auth Proxy
+        run: |
+          curl -sfL -o cloud-sql-proxy \
+            "https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v${CLOUD_SQL_PROXY_VERSION}/cloud-sql-proxy.linux.amd64"
+          chmod +x cloud-sql-proxy
+
+      - name: Start Cloud SQL Auth Proxy
+        env:
+          CONN: ${{ steps.sql.outputs.connection }}
+        run: |
+          ./cloud-sql-proxy "$CONN" --port=5432 &
+          for i in $(seq 1 10); do
+            (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+      - name: Install Flyway CLI
+        run: |
+          curl -sfL -o flyway.tar.gz \
+            "https://github.com/flyway/flyway/releases/download/flyway-${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz"
+          mkdir -p flyway && tar -xzf flyway.tar.gz -C flyway --strip-components=1
+
+      - name: Flyway info (current state)
+        env:
+          FLYWAY_URL: "jdbc:postgresql://127.0.0.1:5432/loete"
+          FLYWAY_USER: ${{ steps.creds.outputs.user }}
+          FLYWAY_PASSWORD: ${{ steps.creds.outputs.pass }}
+          FLYWAY_LOCATIONS: "filesystem:backend/src/main/resources/db/migration"
+          FLYWAY_BASELINE_ON_MIGRATE: "true"
+        run: ./flyway/flyway info
+
+      - name: Flyway migrate
+        env:
+          FLYWAY_URL: "jdbc:postgresql://127.0.0.1:5432/loete"
+          FLYWAY_USER: ${{ steps.creds.outputs.user }}
+          FLYWAY_PASSWORD: ${{ steps.creds.outputs.pass }}
+          FLYWAY_LOCATIONS: "filesystem:backend/src/main/resources/db/migration"
+          FLYWAY_BASELINE_ON_MIGRATE: "true"
+        run: ./flyway/flyway migrate
