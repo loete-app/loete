@@ -77,7 +77,6 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-      artifact-metadata: write
     strategy:
       fail-fast: false
       matrix:
@@ -120,8 +119,8 @@ jobs:
         with:
           image: ${{ steps.refs.outputs.ref }}
           format: spdx-json
-          artifact-name: sbom-${{ matrix.component }}-${{ github.sha }}.spdx.json
-          upload-artifact: true
+          output-file: sbom-${{ matrix.component }}-${{ github.sha }}.spdx.json
+          upload-artifact: false
 
       - name: Install cosign
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
