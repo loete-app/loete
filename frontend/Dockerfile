@@ -10,9 +10,7 @@ COPY . .
 RUN sed -i "s|http://localhost:8080/api|${API_URL}|g" src/environments/environment.ts \
     && pnpm run build
 
-FROM gcr.io/distroless/nodejs22-debian12:nonroot@sha256:13593b7570658e8477de39e2f4a1dd25db2f836d68a0ba771251572d23bb4f8e
-WORKDIR /app
-COPY --from=build --chown=nonroot:nonroot /app/dist ./dist
-USER nonroot
+FROM nginxinc/nginx-unprivileged:1.27-alpine@sha256:65e3e85dbaed8ba248841d9d58a899b6197106c23cb0ff1a132b7bfe0547e4c0
+COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 4000
-CMD ["dist/frontend/server/server.mjs"]
