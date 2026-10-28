@@ -4,4 +4,4 @@ github_repo = "loete-app/loete"
 
 # Set to the deployed frontend Cloud Run URL after first apply, then re-apply.
 # Comma-separate multiple origins if needed.
-cors_origins = ""
+cors_origins = "https://loete-frontend-162062093786.europe-west1.run.app"
