@@ -45,7 +45,7 @@ jobs:
 
   # ── Build & push images ──────────────────────────────────────────────
   build:
-    needs: [frontend, backend, sonar]
+    needs: [frontend, backend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     uses: ./.github/workflows/_build.yml
     with:
