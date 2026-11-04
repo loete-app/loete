@@ -1,36 +1,50 @@
-package ch.loete.backend.config;
+package ch.loete.backend.domain.job;
 
 import ch.loete.backend.domain.service.VibeSearchService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
- * Scheduler für die Generierung von Event-Embeddings.
+ * Job für die Generierung von Event-Embeddings.
  *
- * <p>Führt nächtlich und nach jeder Ticketmaster-Synchronisation die Embedding-Generierung für
- * Events durch, die noch kein Embedding besitzen oder deren Embedding veraltet ist.
+ * <p>Wird extern via Cloud Scheduler über {@code POST /api/internal/jobs/embeddings} angestossen
+ * und reagiert zusätzlich auf {@link TicketmasterSyncCompleteEvent}, um direkt nach einer
+ * Synchronisation Embeddings für neu importierte Events zu generieren.
  */
 @Slf4j
 @Component
 @Profile("!test & !testdata")
 @RequiredArgsConstructor
-public class EmbeddingScheduler {
+public class EmbeddingJob {
 
   /** Service für die Vibe-Suche und Embedding-Generierung. */
   private final VibeSearchService vibeSearchService;
 
-  /** Führt die nächtliche Embedding-Generierung um 03:30 Uhr (Europe/Zurich) aus. */
-  @Scheduled(cron = "0 30 3 * * *", zone = "Europe/Zurich")
-  public void nightlyEmbedding() {
-    log.info("Starting nightly embedding run");
+  /** Verhindert überlappende Ausführungen auf derselben Instanz. */
+  private final AtomicBoolean running = new AtomicBoolean(false);
+
+  /**
+   * Führt die Embedding-Generierung asynchron im {@code jobExecutor} aus. Wird vom {@code
+   * InternalJobsController} aufgerufen.
+   */
+  @Async("jobExecutor")
+  public void runEmbedding() {
+    if (!running.compareAndSet(false, true)) {
+      log.warn("Embedding job already running, skipping concurrent invocation");
+      return;
+    }
     try {
+      log.info("Starting nightly embedding run");
       vibeSearchService.embedPendingEvents();
     } catch (Exception e) {
       log.error("Nightly embedding failed: {}", e.getMessage(), e);
+    } finally {
+      running.set(false);
     }
   }
 

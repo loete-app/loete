@@ -1,4 +1,4 @@
-package ch.loete.backend.config;
+package ch.loete.backend.domain.job;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -6,8 +6,8 @@ import org.springframework.context.ApplicationEvent;
  * Anwendungsereignis, das nach dem erfolgreichen Abschluss einer Ticketmaster-Synchronisation
  * publiziert wird.
  *
- * <p>Wird von {@link TicketmasterSyncScheduler} ausgelöst und von {@link EmbeddingScheduler}
- * konsumiert, um anschliessend die Embedding-Generierung zu starten.
+ * <p>Wird von {@link TicketmasterSyncJob} ausgelöst und von {@link EmbeddingJob} konsumiert, um
+ * anschliessend die Embedding-Generierung zu starten.
  */
 public class TicketmasterSyncCompleteEvent extends ApplicationEvent {
 

@@ -69,11 +69,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
    * Bestimmt, ob der Filter für den gegebenen Request übersprungen werden soll.
    *
    * @param request der eingehende HTTP-Request
-   * @return {@code true} wenn der Pfad mit {@code /auth/} beginnt
+   * @return {@code true} wenn der Pfad mit {@code /auth/} oder {@code /internal/} beginnt. {@code
+   *     /internal/} wird ausgespart, damit der OIDC-Filter (Cloud Scheduler) den Authorization-
+   *     Header eigenständig auswerten kann.
    */
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
-    return request.getServletPath().startsWith("/auth/");
+    String path = request.getServletPath();
+    return path.startsWith("/auth/") || path.startsWith("/internal/");
   }
 
   /**
