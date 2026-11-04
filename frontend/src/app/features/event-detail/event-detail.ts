@@ -299,7 +299,7 @@ export class EventDetailPage implements OnInit {
 
   ngOnInit(): void {
     this.seo.set("Event-Details", "Event-Details auf Löte.");
-    this.favoriteService.loadIds();
+    this.favoriteService.init();
     this.route.paramMap.subscribe((params) => {
       const id = params.get("id");
       if (id) this.loadEvent(id);
@@ -322,6 +322,7 @@ export class EventDetailPage implements OnInit {
   toggleFavorite(): void {
     const ev = this.event();
     if (!ev || this.favLoading()) return;
+
     this.favLoading.set(true);
 
     const handlers = {

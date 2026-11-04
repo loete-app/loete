@@ -9,8 +9,9 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface JwtResponse {
-  token: string;
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
   userId: string;
   username: string;
   email: string;

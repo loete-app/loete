@@ -43,9 +43,13 @@ jobs:
     uses: ./.github/workflows/_security-static.yml
     secrets: inherit
 
+  e2e:
+    needs: [frontend, backend]
+    uses: ./.github/workflows/_e2e.yml
+
   # ── Build & push images ──────────────────────────────────────────────
   build:
-    needs: [frontend, backend]
+    needs: [frontend, backend, e2e]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     uses: ./.github/workflows/_build.yml
     with:

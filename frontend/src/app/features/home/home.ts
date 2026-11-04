@@ -194,7 +194,7 @@ export class Home implements OnInit {
       "Events entdecken",
       "Entdecke Konzerte, Festivals, Sport und mehr in der Schweiz – an einem Ort.",
     );
-    this.favoriteService.loadIds();
+    this.favoriteService.init();
 
     const qp = this.route.snapshot.queryParamMap;
     this.filters = {

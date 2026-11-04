@@ -27,5 +27,13 @@ jobs:
       - name: Lint
         run: ./mvnw --batch-mode --no-transfer-progress checkstyle:check
 
-      - name: Tests
-        run: ./mvnw --batch-mode --no-transfer-progress -T 1C test
+      - name: Tests + coverage
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Upload JaCoCo report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+          retention-days: 7

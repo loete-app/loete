@@ -4,6 +4,7 @@ import ch.loete.backend.web.dto.response.ErrorResponse;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,6 +23,18 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex) {
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body(new ErrorResponse(409, ex.getMessage(), Instant.now()));
+  }
+
+  @ExceptionHandler(AuthenticationException.class)
+  public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body(new ErrorResponse(401, ex.getMessage(), Instant.now()));
+  }
+
+  @ExceptionHandler(BadCredentialsException.class)
+  public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body(new ErrorResponse(401, "Invalid email or password", Instant.now()));
   }
 
   @ExceptionHandler(ResponseStatusException.class)

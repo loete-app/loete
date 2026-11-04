@@ -53,12 +53,11 @@ public class EventService {
   }
 
   @Transactional(readOnly = true)
-  public EventDetailResponse getEvent(String id, String clientId) {
+  public EventDetailResponse getEvent(String id, String userId) {
     Event event =
         eventRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event", id));
 
-    boolean favorited =
-        clientId != null && favoriteRepository.existsByClientIdAndEventId(clientId, id);
+    boolean favorited = userId != null && favoriteRepository.existsByUser_IdAndEvent_Id(userId, id);
 
     return toEventDetailResponse(event, favorited);
   }

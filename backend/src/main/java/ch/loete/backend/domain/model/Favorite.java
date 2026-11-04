@@ -24,15 +24,16 @@ import org.hibernate.annotations.CreationTimestamp;
 @Entity
 @Table(
     name = "favorites",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"client_id", "event_id"}))
+    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "event_id"}))
 public class Favorite {
 
   @Id
   @Column(length = 8)
   private String id;
 
-  @Column(name = "client_id", nullable = false, length = 64)
-  private String clientId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "event_id", nullable = false)

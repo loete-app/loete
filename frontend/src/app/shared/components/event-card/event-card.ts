@@ -185,6 +185,7 @@ export class EventCard {
     ev.preventDefault();
     ev.stopPropagation();
     if (this.busy()) return;
+
     this.busy.set(true);
 
     const id = this.event().id;

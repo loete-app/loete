@@ -29,6 +29,11 @@ server:
     context-path: /api
 
 app:
+  jwt:
+    # DEV ONLY – production MUST set JWT_SECRET env var
+    secret: ${JWT_SECRET:default-dev-secret-that-is-at-least-64-bytes-long-for-hs512-algorithm-xxxx}
+    access-expiration-ms: ${JWT_ACCESS_EXPIRATION:900000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
   ticketmaster:

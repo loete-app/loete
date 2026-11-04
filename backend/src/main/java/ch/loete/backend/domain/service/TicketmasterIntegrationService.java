@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,16 @@ public class TicketmasterIntegrationService {
 
   private static final int MAX_EVENTS_PER_SYNC = 1000;
   private static final int LOOKAHEAD_DAYS = 90;
+
+  private static final Map<String, String> SEGMENT_TO_CATEGORY =
+      Map.ofEntries(
+          Map.entry("music", "Konzert"),
+          Map.entry("sports", "Sport"),
+          Map.entry("arts & theatre", "Theater"),
+          Map.entry("arts & theater", "Theater"),
+          Map.entry("film", "Sonstiges"),
+          Map.entry("miscellaneous", "Sonstiges"),
+          Map.entry("comedy", "Comedy"));
 
   /**
    * Deletes past events, then fetches up to {@value #MAX_EVENTS_PER_SYNC} Swiss events starting in
@@ -96,16 +107,11 @@ public class TicketmasterIntegrationService {
   }
 
   private Category findOrCreateCategory(String segmentName) {
-    String name = (segmentName == null || segmentName.isBlank()) ? "Sonstiges" : segmentName;
-    String slug = name.toLowerCase().replaceAll("[^a-z0-9]+", "-");
-
-    return categoryRepository
-        .findByNameIgnoreCase(name)
-        .orElseGet(
-            () -> {
-              Category category = Category.builder().name(name).slug(slug).build();
-              return categoryRepository.save(category);
-            });
+    String mapped = "Sonstiges";
+    if (segmentName != null && !segmentName.isBlank()) {
+      mapped = SEGMENT_TO_CATEGORY.getOrDefault(segmentName.toLowerCase().trim(), "Sonstiges");
+    }
+    return categoryRepository.findByNameIgnoreCase(mapped).orElseThrow();
   }
 
   private Location findOrCreateLocation(TicketmasterEvent tmEvent) {

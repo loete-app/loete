@@ -34,6 +34,5 @@ jobs:
 
       - name: Typecheck
         run: pnpm exec tsc --noEmit -p tsconfig.app.json
-      # TODO: re-enable once the first *.spec.ts is added.
-      # - name: Tests
-      #   run: pnpm exec ng test --watch=false
+      - name: Tests + coverage
+        run: pnpm exec ng test --watch=false

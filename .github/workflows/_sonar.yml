@@ -24,9 +24,27 @@ jobs:
           java-version: "25"
           cache: maven
 
-      - name: Compile backend
+      - name: Backend tests + coverage
         working-directory: backend
-        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests compile
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Frontend install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend tests + coverage
+        working-directory: frontend
+        run: pnpm exec ng test --watch=false
 
       - name: Analyze
         uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216 # v2.2.0
@@ -42,3 +60,6 @@ jobs:
             -Dsonar.java.source=25
             -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/.angular/**,frontend/pnpm-lock.yaml
             -Dsonar.typescript.tsconfigPaths=frontend/tsconfig.json,frontend/tsconfig.app.json
+            -Dsonar.java.coveragePlugin=jacoco
+            -Dsonar.coverage.jacoco.xmlReportPaths=backend/target/site/jacoco/jacoco.xml
+            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
