@@ -1,3 +1,9 @@
+/**
+ * Wiederverwendbare Event-Karten-Komponente.
+ *
+ * Zeigt eine Vorschaukarte eines Events mit Bild, Kategorie-Badge,
+ * Datum, Stadt und Favoriten-Button an. Verlinkt auf die Event-Detailseite.
+ */
 import { Component, inject, input, signal } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { RouterLink } from "@angular/router";
@@ -165,22 +171,31 @@ import { LucideAngularModule, Calendar, MapPin, Heart } from "lucide-angular";
   `,
 })
 export class EventCard {
+  /** Das anzuzeigende Event (Pflicht-Input). */
   event = input.required<Event>();
 
+  /** Service für Favoriten-Operationen. */
   private favoriteService = inject(FavoriteService);
 
+  /** Kalender-Icon für die Datumsanzeige. */
   readonly CalendarIcon = Calendar;
+  /** Karten-Pin-Icon für die Ortsanzeige. */
   readonly MapPinIcon = MapPin;
+  /** Herz-Icon für die Favoriten-Funktion. */
   readonly HeartIcon = Heart;
+  /** Fallback-Bild-URL wenn kein Event-Bild vorhanden ist. */
   readonly fallbackImage =
     "https://placehold.co/400x250/1a1a2e/e0e0e0?text=Kein+Bild";
 
+  /** Ladezustand waehrend der Favoriten-Aktion. */
   busy = signal(false);
 
+  /** Prüft, ob das Event in den Favoriten ist. */
   isFavorite(): boolean {
     return this.favoriteService.favoriteIds().has(this.event().id);
   }
 
+  /** Wechselt den Favoriten-Status (mit Event-Propagation-Stopp). */
   toggleFavorite(ev: MouseEvent): void {
     ev.preventDefault();
     ev.stopPropagation();
@@ -199,6 +214,7 @@ export class EventCard {
     }
   }
 
+  /** Setzt das Fallback-Bild bei Bild-Ladefehler. */
   onImageError(event: globalThis.Event): void {
     const img = event.target as HTMLImageElement;
     img.src = this.fallbackImage;

@@ -1,3 +1,10 @@
+/**
+ * Wiederverwendbare Filter-Leiste für die Event-Suche und -Filterung.
+ *
+ * Bietet ein Suchfeld mit Debouncing, Dropdowns für Kategorie und Stadt,
+ * Datumseingaben und einen Zuruecksetzen-Button. Lädt Kategorien und
+ * Städte beim Init vom Backend.
+ */
 import {
   Component,
   inject,
@@ -12,6 +19,7 @@ import { LocationService } from "@/core/services/location.service";
 import { Category } from "@/core/models/category.model";
 import { LucideAngularModule, Search, X } from "lucide-angular";
 
+/** Werte der Filter-Leiste. */
 export interface FilterValues {
   search: string;
   categoryId: number | null;
@@ -166,27 +174,43 @@ export interface FilterValues {
   `,
 })
 export class FilterBar implements OnInit {
+  /** Service für das Laden der Kategorien. */
   private categoryService = inject(CategoryService);
+  /** Service für das Laden der Städte. */
   private locationService = inject(LocationService);
 
+  /** Initiale Filterwerte (für URL-Parameter-Wiederherstellung). */
   initial = input<FilterValues | null>(null);
+  /** Platzhaltertext für das Suchfeld. */
   searchPlaceholder = input<string>("Eventname suchen...");
+  /** Ausgabe-Event bei Filteraenderungen. */
   filtersChange = output<FilterValues>();
 
+  /** Verfügbare Kategorien für das Dropdown. */
   categories = signal<Category[]>([]);
+  /** Verfügbare Städte für das Dropdown. */
   cities = signal<string[]>([]);
 
+  /** Aktueller Suchtext. */
   search = "";
+  /** Ausgewaehlte Kategorie-ID. */
   categoryId: number | null = null;
+  /** Ausgewaehlte Stadt. */
   city: string | null = null;
+  /** Startdatum-Filter. */
   dateFrom: string | null = null;
+  /** Enddatum-Filter. */
   dateTo: string | null = null;
 
+  /** Such-Icon für das Suchfeld. */
   readonly SearchIcon = Search;
+  /** X-Icon für den Zuruecksetzen-Button. */
   readonly XIcon = X;
 
+  /** Timer für das Debouncing der Sucheingabe. */
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Initialisiert Filter und lädt Kategorien/Städte. */
   ngOnInit(): void {
     const init = this.initial();
     if (init) {
@@ -207,11 +231,13 @@ export class FilterBar implements OnInit {
     });
   }
 
+  /** Debounced die Sucheingabe (300ms Verzögerung). */
   onSearchInput(): void {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => this.onChange(), 300);
   }
 
+  /** Emittiert die aktuellen Filterwerte. */
   onChange(): void {
     this.filtersChange.emit({
       search: this.search.trim(),
@@ -222,6 +248,7 @@ export class FilterBar implements OnInit {
     });
   }
 
+  /** Setzt alle Filter auf ihre Standardwerte zurück. */
   reset(): void {
     this.search = "";
     this.categoryId = null;
@@ -231,6 +258,7 @@ export class FilterBar implements OnInit {
     this.onChange();
   }
 
+  /** Prüft, ob mindestens ein Filter aktiv ist. */
   hasActiveFilters(): boolean {
     return !!(
       this.search ||

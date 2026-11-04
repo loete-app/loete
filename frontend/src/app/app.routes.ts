@@ -1,3 +1,8 @@
+/**
+ * Routing-Konfiguration der Angular-Anwendung.
+ *
+ * Definiert alle Routen und deren zugehörige Komponenten.
+ */
 import { Routes } from "@angular/router";
 import { Home } from "./features/home/home";
 import { EventDetailPage } from "./features/event-detail/event-detail";
@@ -5,6 +10,8 @@ import { Favorites } from "./features/favorites/favorites";
 import { Login } from "./features/auth/login/login";
 import { Register } from "./features/auth/register/register";
 import { NotFound } from "./features/not-found/not-found";
+
+/** Alle Routen der Anwendung. */
 export const routes: Routes = [
   { path: "", component: Home },
   { path: "login", component: Login },

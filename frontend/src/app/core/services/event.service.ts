@@ -1,3 +1,9 @@
+/**
+ * Service für den Zugriff auf Event-Daten.
+ *
+ * Stellt Methoden für die paginierte Event-Liste und die
+ * Event-Detailansicht bereit.
+ */
 import { Injectable, inject } from "@angular/core";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Observable } from "rxjs";
@@ -11,9 +17,17 @@ import {
 
 @Injectable({ providedIn: "root" })
 export class EventService {
+  /** HTTP-Client für API-Aufrufe. */
   private readonly http = inject(HttpClient);
+  /** Basis-URL der Event-API-Endpunkte. */
   private readonly apiUrl = `${environment.apiUrl}/events`;
 
+  /**
+   * Ruft eine paginierte, gefilterte Liste von Events ab.
+   *
+   * @param filter die Filterkriterien und Paginierungsparameter
+   * @returns Observable mit der paginierten Event-Liste
+   */
   getEvents(filter: EventFilter = {}): Observable<PagedResponse<Event>> {
     let params = new HttpParams();
     if (filter.page != null)
@@ -30,6 +44,12 @@ export class EventService {
     return this.http.get<PagedResponse<Event>>(this.apiUrl, { params });
   }
 
+  /**
+   * Ruft die Detailansicht eines Events ab.
+   *
+   * @param id die Event-ID
+   * @returns Observable mit den Event-Details
+   */
   getEvent(id: string): Observable<EventDetail> {
     return this.http.get<EventDetail>(`${this.apiUrl}/${id}`);
   }

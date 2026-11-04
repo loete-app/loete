@@ -7,9 +7,25 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 
+/**
+ * Builder für die textuelle Eingabe der Embedding-Generierung.
+ *
+ * <p>Konstruiert aus den Feldern eines Events (Name, Kategorie, Location, Datum, Beschreibung)
+ * einen zusammengesetzten Textstring, der als Eingabe für die Embedding-API dient. Reichert die
+ * Eingabe mit semantischen Informationen wie Jahreszeit und Tageszeit an.
+ */
 @Component
 public class EmbeddingInputBuilder {
 
+  /**
+   * Erstellt den Embedding-Eingabetext für ein Event.
+   *
+   * <p>Kombiniert Name, Kategorie, Veranstaltungsort, Datum (inkl. Jahreszeit und Tageszeit) sowie
+   * eine gekürzte Beschreibung zu einem Satz-String.
+   *
+   * @param event das Event, für das die Eingabe erstellt wird
+   * @return der zusammengesetzte Eingabetext
+   */
   public String buildEmbeddingInput(Event event) {
     List<String> parts = new ArrayList<>();
 
@@ -52,6 +68,12 @@ public class EmbeddingInputBuilder {
     return String.join(". ", parts);
   }
 
+  /**
+   * Bestimmt die Jahreszeit anhand des Monats.
+   *
+   * @param month der Monat (1-12)
+   * @return die Jahreszeit als englischer String
+   */
   private String getSeason(int month) {
     return switch (month) {
       case 12, 1, 2 -> "Winter";
@@ -62,6 +84,12 @@ public class EmbeddingInputBuilder {
     };
   }
 
+  /**
+   * Bestimmt die Tageszeit anhand der Stunde.
+   *
+   * @param hour die Stunde (0-23)
+   * @return die Tageszeit als englischer String
+   */
   private String getTimeOfDay(int hour) {
     if (hour < 12) return "morning";
     if (hour < 17) return "afternoon";

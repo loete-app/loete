@@ -1,3 +1,10 @@
+/**
+ * Navigationsleiste der Anwendung.
+ *
+ * Zeigt die Hauptnavigation mit Links zu Events und Favoriten,
+ * sowie den Authentifizierungsstatus (Login/Registrieren oder
+ * Benutzername/Abmelden) an.
+ */
 import { Component, inject } from "@angular/core";
 import { RouterLink, RouterLinkActive } from "@angular/router";
 import { LucideAngularModule, Heart } from "lucide-angular";
@@ -121,10 +128,14 @@ import { AuthService } from "@/core/services/auth.service";
   `,
 })
 export class Navbar {
+  /** Auth-Service für Authentifizierungsstatus und Logout. */
   private authService = inject(AuthService);
+  /** Herz-Icon für den Favoriten-Link. */
   readonly HeartIcon = Heart;
+  /** Signal mit dem aktuell eingeloggten Benutzer. */
   readonly currentUser = this.authService.currentUser;
 
+  /** Meldet den Benutzer ab. */
   onLogout(): void {
     this.authService.logout();
   }

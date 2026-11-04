@@ -24,18 +24,36 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+/**
+ * Zentrale Sicherheitskonfiguration der Anwendung.
+ *
+ * <p>Konfiguriert Spring Security mit JWT-basierter, zustandsloser Authentifizierung, CORS-Regeln,
+ * öffentlichen und geschützten Endpunkten sowie Passwort-Encoding.
+ */
 @Configuration
 @EnableWebSecurity
 @org.springframework.context.annotation.Profile("!test")
 public class SecurityConfig {
 
+  /** Kommaseparierte Liste der erlaubten CORS-Origins aus der Konfiguration. */
   @Value("${app.cors.allowed-origins}")
   private String allowedOrigins;
 
+  /** JWT-Authentifizierungsfilter, der vor dem Standard-Authentifizierungsfilter eingefügt wird. */
   @org.springframework.context.annotation.Lazy
   @org.springframework.beans.factory.annotation.Autowired
   private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+  /**
+   * Erstellt die Security-Filter-Chain mit JWT-Authentifizierung und Zugriffsregeln.
+   *
+   * <p>Öffentliche Endpunkte: Auth, Events (GET), Kategorien (GET), Locations (GET), Suche (POST),
+   * Actuator-Health, Swagger-UI. Alle anderen Endpunkte erfordern Authentifizierung.
+   *
+   * @param http das HttpSecurity-Konfigurationsobjekt
+   * @return die konfigurierte SecurityFilterChain
+   * @throws Exception bei Konfigurationsfehlern
+   */
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     return http.csrf(csrf -> csrf.disable())
@@ -63,17 +81,35 @@ public class SecurityConfig {
         .build();
   }
 
+  /**
+   * Erstellt den BCrypt-PasswordEncoder für die Passwort-Hashung.
+   *
+   * @return eine BCryptPasswordEncoder-Instanz
+   */
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
 
+  /**
+   * Stellt den AuthenticationManager für die Login-Authentifizierung bereit.
+   *
+   * @param config die AuthenticationConfiguration
+   * @return der konfigurierte AuthenticationManager
+   * @throws Exception bei Konfigurationsfehlern
+   */
   @Bean
   public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
       throws Exception {
     return config.getAuthenticationManager();
   }
 
+  /**
+   * Erstellt einen UserDetailsService, der Benutzer anhand ihrer E-Mail-Adresse lädt.
+   *
+   * @param userRepository das Repository für den Datenbankzugriff auf Benutzer
+   * @return der konfigurierte UserDetailsService
+   */
   @Bean
   public UserDetailsService userDetailsService(UserRepository userRepository) {
     return email -> {
@@ -90,6 +126,11 @@ public class SecurityConfig {
     };
   }
 
+  /**
+   * Erstellt die CORS-Konfiguration basierend auf den erlaubten Origins.
+   *
+   * @return die konfigurierte CorsConfigurationSource
+   */
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();

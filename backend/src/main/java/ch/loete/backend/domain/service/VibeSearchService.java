@@ -17,27 +17,53 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service für die semantische "Vibe-Suche" nach Events.
+ *
+ * <p>Kombiniert pgvector-basierte semantische Suche (Embedding-Ähnlichkeit) mit keyword-basierter
+ * Textsuche. Semantische Ergebnisse werden priorisiert, Keyword-Treffer füllen auf. Verwaltet
+ * ausserdem die Batch-Generierung von Embeddings für Events ohne oder mit veralteten Embeddings.
+ */
 @Slf4j
 @Service
 public class VibeSearchService {
 
+  /** Repository für den Zugriff auf Event-Daten und native pgvector-Queries. */
   private final EventRepository eventRepository;
+
+  /** Service für paginierte Event-Abfragen (Keyword-Fallback). */
   private final EventService eventService;
+
+  /** Service für die Generierung von Vektor-Embeddings. */
   private final EmbeddingService embeddingService;
+
+  /** Builder für die textuelle Embedding-Eingabe. */
   private final EmbeddingInputBuilder embeddingInputBuilder;
 
+  /** Flag, ob die Vibe-Suche aktiviert ist. */
   @Value("${app.vibe-search.enabled}")
   private boolean vibeSearchEnabled;
 
+  /** Schwellenwert für die Kosinusaehnlichkeit (0-1, niedriger = strenger). */
   @Value("${app.vibe-search.similarity-threshold}")
   private double similarityThreshold;
 
+  /** Batch-Grösse für die Embedding-Generierung. */
   @Value("${app.vibe-search.embedding-batch-size}")
   private int embeddingBatchSize;
 
+  /** Standard-Limit für Suchergebnisse. */
   @Value("${app.vibe-search.default-limit}")
   private int defaultLimit;
 
+  /**
+   * Erstellt einen neuen VibeSearchService.
+   *
+   * @param eventRepository Repository für Event-Daten
+   * @param eventService Service für Event-Abfragen
+   * @param embeddingService Service für Embedding-Generierung
+   * @param embeddingInputBuilder Builder für Embedding-Eingabetexte
+   */
   public VibeSearchService(
       EventRepository eventRepository,
       EventService eventService,
@@ -49,6 +75,15 @@ public class VibeSearchService {
     this.embeddingInputBuilder = embeddingInputBuilder;
   }
 
+  /**
+   * Führt eine hybride Vibe-Suche durch (semantisch + keyword).
+   *
+   * <p>Generiert ein Embedding für die Suchanfrage und findet ähnliche Events via pgvector. Ergänzt
+   * die Ergebnisse mit Keyword-Treffern, um auch direkte Namenssuchen abzudecken.
+   *
+   * @param request die Suchanfrage mit Query, Filtern und Limit
+   * @return die Suchergebnisse
+   */
   @Transactional(readOnly = true)
   public VibeSearchResponse search(VibeSearchRequest request) {
     int limit = request.limit() != null ? request.limit() : defaultLimit;
@@ -78,10 +113,8 @@ public class VibeSearchService {
       }
     }
 
-    // Always backfill with keyword results to cover direct name searches
     List<EventResponse> keywordResults = getKeywordResults(request, limit);
 
-    // Merge: semantic first (ranked by relevance), then keyword hits not already present
     Set<String> seenIds = new LinkedHashSet<>();
     List<EventResponse> merged = new ArrayList<>();
 
@@ -100,6 +133,13 @@ public class VibeSearchService {
     return new VibeSearchResponse(results, false);
   }
 
+  /**
+   * Generiert Embeddings für Events, die noch keines besitzen oder deren Embedding älter als 7 Tage
+   * ist.
+   *
+   * <p>Verarbeitet Events in Batches und haelt zwischen Batches eine kurze Pause ein, um die API
+   * nicht zu ueberlasten.
+   */
   public void embedPendingEvents() {
     if (!vibeSearchEnabled || !embeddingService.isConfigured()) {
       log.debug("Embedding skipped: vibe search disabled or API key not configured");
@@ -148,6 +188,13 @@ public class VibeSearchService {
     log.info("Embedding complete");
   }
 
+  /**
+   * Holt Keyword-basierte Suchergebnisse als Fallback.
+   *
+   * @param request die Suchanfrage
+   * @param limit maximale Anzahl Ergebnisse
+   * @return die Keyword-Treffer
+   */
   private List<EventResponse> getKeywordResults(VibeSearchRequest request, int limit) {
     EventFilterRequest filter =
         new EventFilterRequest(
@@ -161,6 +208,12 @@ public class VibeSearchService {
     return eventService.getEvents(filter).content();
   }
 
+  /**
+   * Prüft, ob die Suchanfrage strukturierte Filter (Kategorie, Stadt, Datum) enthält.
+   *
+   * @param request die Suchanfrage
+   * @return {@code true} wenn mindestens ein Filter gesetzt ist
+   */
   private boolean hasStructuredFilters(VibeSearchRequest request) {
     return request.categoryId() != null
         || request.city() != null
@@ -168,6 +221,12 @@ public class VibeSearchService {
         || request.dateTo() != null;
   }
 
+  /**
+   * Konvertiert eine Event-Entität in ein EventResponse-DTO.
+   *
+   * @param event die Event-Entität
+   * @return das Response-DTO
+   */
   private EventResponse toEventResponse(Event event) {
     return new EventResponse(
         event.getId(),

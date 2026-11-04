@@ -12,15 +12,35 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
+/**
+ * Service für die Generierung von Vektor-Embeddings über eine externe API.
+ *
+ * <p>Kommuniziert mit einer OpenAI-kompatiblen Embeddings-API, um Texte in Vektoren umzuwandeln.
+ * Diese Vektoren werden für die semantische Vibe-Suche in pgvector gespeichert.
+ */
 @Slf4j
 @Service
 public class EmbeddingService {
 
+  /** HTTP-Client für die Kommunikation mit der Embeddings-API. */
   private final RestClient restClient;
+
+  /** Jackson ObjectMapper für das Parsen der API-Antworten. */
   private final ObjectMapper objectMapper = new ObjectMapper();
+
+  /** API-Schlüssel für die Embeddings-API. */
   private final String apiKey;
+
+  /** Name des zu verwendenden Embedding-Modells. */
   private final String model;
 
+  /**
+   * Erstellt einen neuen EmbeddingService.
+   *
+   * @param baseUrl die Basis-URL der Embeddings-API
+   * @param apiKey der API-Schlüssel
+   * @param model der Modellname (z.B. "text-embedding-3-small")
+   */
   public EmbeddingService(
       @Value("${app.embeddings.base-url}") String baseUrl,
       @Value("${app.embeddings.api-key}") String apiKey,
@@ -30,10 +50,21 @@ public class EmbeddingService {
     this.restClient = RestClient.builder().baseUrl(baseUrl).build();
   }
 
+  /**
+   * Prüft, ob die Embeddings-API konfiguriert ist (API-Key vorhanden).
+   *
+   * @return {@code true} wenn ein API-Key gesetzt ist
+   */
   public boolean isConfigured() {
     return StringUtils.hasText(apiKey);
   }
 
+  /**
+   * Generiert Embeddings für eine Liste von Texten.
+   *
+   * @param texts die zu vektorisierenden Texte
+   * @return Liste der Embedding-Vektoren, leer bei Fehler oder fehlender Konfiguration
+   */
   public List<float[]> generateEmbeddings(List<String> texts) {
     if (!isConfigured()) {
       log.warn("Embeddings API key not configured, skipping embedding generation");
@@ -76,6 +107,13 @@ public class EmbeddingService {
     return embeddings;
   }
 
+  /**
+   * Generiert ein einzelnes Embedding für einen Text.
+   *
+   * @param text der zu vektorisierende Text
+   * @return der Embedding-Vektor
+   * @throws IllegalStateException wenn die Generierung fehlschlaegt
+   */
   public float[] generateEmbedding(String text) {
     List<float[]> result = generateEmbeddings(List.of(text));
     if (result.isEmpty()) {
@@ -85,6 +123,12 @@ public class EmbeddingService {
     return result.getFirst();
   }
 
+  /**
+   * Konvertiert einen float-Vektor in das pgvector-String-Format.
+   *
+   * @param vector der zu konvertierende Vektor
+   * @return der Vektor als String im Format "[0.1,0.2,...]"
+   */
   public static String toVectorString(float[] vector) {
     StringBuilder sb = new StringBuilder("[");
     for (int i = 0; i < vector.length; i++) {

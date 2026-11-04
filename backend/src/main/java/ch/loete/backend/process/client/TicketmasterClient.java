@@ -16,14 +16,42 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
+/**
+ * HTTP-Client für die Ticketmaster Discovery API.
+ *
+ * <p>Ruft Events aus der Ticketmaster-API ab, paginiert durch die Ergebnisse und parst die
+ * JSON-Antworten in {@link TicketmasterEvent}-Records. Beschraenkt sich auf Events in der Schweiz
+ * (countryCode=CH).
+ */
 @Slf4j
 @Component
 public class TicketmasterClient {
 
+  /** HTTP-Client für die Kommunikation mit der Ticketmaster-API. */
   private final RestClient restClient;
+
+  /** API-Schlüssel für die Ticketmaster Discovery API. */
   private final String apiKey;
+
+  /** Jackson ObjectMapper für das Parsen der JSON-Antworten. */
   private final ObjectMapper objectMapper = new ObjectMapper();
 
+  /**
+   * Datenklasse für ein aus der Ticketmaster-API geparstes Event.
+   *
+   * @param id die Ticketmaster-Event-ID
+   * @param name der Event-Name
+   * @param info die Event-Beschreibung
+   * @param url die Ticketmaster-URL
+   * @param imageUrl die URL des Event-Bildes
+   * @param startDate das Startdatum und die Startzeit
+   * @param segmentName der Segmentname (z.B. "Music", "Sports")
+   * @param venueName der Name des Veranstaltungsortes
+   * @param city die Stadt des Veranstaltungsortes
+   * @param countryCode der Ländercode (z.B. "CH")
+   * @param latitude die geografische Breite
+   * @param longitude die geografische Länge
+   */
   public record TicketmasterEvent(
       String id,
       String name,
@@ -38,6 +66,12 @@ public class TicketmasterClient {
       Double latitude,
       Double longitude) {}
 
+  /**
+   * Erstellt einen neuen TicketmasterClient.
+   *
+   * @param baseUrl die Basis-URL der Ticketmaster Discovery API
+   * @param apiKey der API-Schlüssel
+   */
   public TicketmasterClient(
       @Value("${app.ticketmaster.base-url}") String baseUrl,
       @Value("${app.ticketmaster.api-key}") String apiKey) {
@@ -45,12 +79,19 @@ public class TicketmasterClient {
     this.restClient = RestClient.builder().baseUrl(baseUrl).build();
   }
 
+  /** Maximale Seitengrösse pro API-Aufruf. */
   private static final int PAGE_SIZE = 200;
 
   /**
-   * Fetches events from Ticketmaster within the given UTC window, up to {@code maxResults}. Pages
-   * through results (size=200, the API max). Returns whatever it managed to fetch — failures on a
-   * single page are logged and the partial result is returned.
+   * Ruft Events innerhalb des angegebenen Zeitfensters ab.
+   *
+   * <p>Paginiert durch die API-Ergebnisse (max. 200 pro Seite) bis {@code maxResults} erreicht sind
+   * oder keine weiteren Seiten vorhanden sind.
+   *
+   * @param startDateTime Beginn des Zeitfensters (UTC)
+   * @param endDateTime Ende des Zeitfensters (UTC)
+   * @param maxResults maximale Anzahl abzurufender Events
+   * @return Liste der abgerufenen Events
    */
   public List<TicketmasterEvent> fetchUpcomingEvents(
       Instant startDateTime, Instant endDateTime, int maxResults) {
@@ -118,6 +159,12 @@ public class TicketmasterClient {
     return all.size() > maxResults ? all.subList(0, maxResults) : all;
   }
 
+  /**
+   * Parst die Events aus einer API-Antwortseite.
+   *
+   * @param response der JSON-Wurzelknoten der API-Antwort
+   * @return Liste der geparstenEvents
+   */
   private List<TicketmasterEvent> parseEvents(JsonNode response) {
     List<TicketmasterEvent> events = new ArrayList<>();
 
@@ -141,6 +188,12 @@ public class TicketmasterClient {
     return events;
   }
 
+  /**
+   * Parst ein einzelnes Event aus einem JSON-Knoten.
+   *
+   * @param node der JSON-Knoten des Events
+   * @return das geparste TicketmasterEvent
+   */
   private TicketmasterEvent parseEvent(JsonNode node) {
     String id = node.path("id").asText(null);
     String name = node.path("name").asText(null);
@@ -204,6 +257,12 @@ public class TicketmasterClient {
         longitude);
   }
 
+  /**
+   * Parst einen String sicher in einen Double-Wert.
+   *
+   * @param value der zu parsende String
+   * @return der Double-Wert, oder {@code null} bei ungültigem Format
+   */
   private Double parseDouble(String value) {
     if (value == null || value.isBlank()) {
       return null;

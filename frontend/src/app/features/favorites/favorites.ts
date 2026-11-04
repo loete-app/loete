@@ -1,3 +1,10 @@
+/**
+ * Favoriten-Seite.
+ *
+ * Zeigt die gespeicherten Favoriten des Benutzers als Liste an.
+ * Unterstützt sowohl authentifizierte (Server-) als auch anonyme
+ * (LocalStorage-) Favoriten mit entsprechendem Hinweisbanner.
+ */
 import { Component, inject, OnInit, signal } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { RouterLink } from "@angular/router";
@@ -252,13 +259,20 @@ import {
   `,
 })
 export class Favorites implements OnInit {
+  /** Auth-Service für den Authentifizierungsstatus. */
   private authService = inject(AuthService);
+  /** Service für Favoriten-Operationen. */
   private favoriteService = inject(FavoriteService);
+  /** Service für SEO-Meta-Tags. */
   private seo = inject(SeoService);
 
+  /** Liste der geladenen Favoriten. */
   favorites = signal<Favorite[]>([]);
+  /** Ladezustand waehrend des Favoriten-Ladens. */
   loading = signal(true);
+  /** Fehlermeldung bei Ladeproblemen. */
   error = signal<string | null>(null);
+  /** Event-ID des gerade zu entfernenden Favoriten. */
   removingId = signal<string | null>(null);
 
   readonly HeartIcon = Heart;
@@ -269,20 +283,24 @@ export class Favorites implements OnInit {
   readonly fallbackImage =
     "https://placehold.co/120x80/1a1a2e/e0e0e0?text=Kein+Bild";
 
+  /** Prüft, ob der Benutzer eingeloggt ist. */
   isAuthenticated(): boolean {
     return this.authService.isAuthenticated();
   }
 
+  /** Initialisiert die Seite und lädt die Favoriten. */
   ngOnInit(): void {
     this.seo.set("Meine Favoriten", "Deine gespeicherten Events auf Löte.");
     this.favoriteService.init();
     this.load();
   }
 
+  /** Lädt die Favoriten erneut (nach Fehler). */
   reload(): void {
     this.load();
   }
 
+  /** Entfernt einen Favoriten aus der Liste. */
   remove(eventId: string): void {
     this.removingId.set(eventId);
     this.favoriteService.removeFavorite(eventId).subscribe({
@@ -296,11 +314,13 @@ export class Favorites implements OnInit {
     });
   }
 
+  /** Setzt das Fallback-Bild bei Bild-Ladefehler. */
   onImageError(event: globalThis.Event): void {
     const img = event.target as HTMLImageElement;
     img.src = this.fallbackImage;
   }
 
+  /** Lädt die Favoriten vom Server oder LocalStorage. */
   private load(): void {
     this.loading.set(true);
     this.error.set(null);

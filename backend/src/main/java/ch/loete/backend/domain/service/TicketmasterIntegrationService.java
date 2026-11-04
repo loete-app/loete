@@ -19,19 +19,37 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service für die Integration mit der Ticketmaster Discovery API.
+ *
+ * <p>Synchronisiert Events aus der Ticketmaster-API in die lokale Datenbank. Löscht vergangene
+ * Events, importiert neue Events für die nächsten {@value #LOOKAHEAD_DAYS} Tage und führt Upserts
+ * anhand der externen ID durch. Mappt Ticketmaster-Segmente auf Loete-Kategorien.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TicketmasterIntegrationService {
 
+  /** Client für die Kommunikation mit der Ticketmaster-API. */
   private final TicketmasterClient ticketmasterClient;
+
+  /** Repository für den Zugriff auf Event-Daten. */
   private final EventRepository eventRepository;
+
+  /** Repository für den Zugriff auf Kategorie-Daten. */
   private final CategoryRepository categoryRepository;
+
+  /** Repository für den Zugriff auf Location-Daten. */
   private final LocationRepository locationRepository;
 
+  /** Maximale Anzahl zu synchronisierender Events pro Durchlauf. */
   private static final int MAX_EVENTS_PER_SYNC = 1000;
+
+  /** Vorausschau-Zeitraum in Tagen für den Event-Import. */
   private static final int LOOKAHEAD_DAYS = 90;
 
+  /** Mapping von Ticketmaster-Segment-Namen auf Loete-Kategorienamen. */
   private static final Map<String, String> SEGMENT_TO_CATEGORY =
       Map.ofEntries(
           Map.entry("music", "Konzert"),
@@ -43,8 +61,13 @@ public class TicketmasterIntegrationService {
           Map.entry("comedy", "Comedy"));
 
   /**
-   * Deletes past events, then fetches up to {@value #MAX_EVENTS_PER_SYNC} Swiss events starting in
-   * the next {@value #LOOKAHEAD_DAYS} days from Ticketmaster and upserts them by external_id.
+   * Synchronisiert bevorstehende Events aus der Ticketmaster-API.
+   *
+   * <p>Löscht zuerst vergangene Events, ruft dann bis zu {@value #MAX_EVENTS_PER_SYNC} Schweizer
+   * Events für die nächsten {@value #LOOKAHEAD_DAYS} Tage ab und führt Upserts anhand der externen
+   * ID durch.
+   *
+   * @return die Anzahl der erfolgreich synchronisierten Events
    */
   @Transactional
   public int syncUpcomingEvents() {
@@ -85,6 +108,11 @@ public class TicketmasterIntegrationService {
     return count;
   }
 
+  /**
+   * Fügt ein Ticketmaster-Event ein oder aktualisiert es anhand der externen ID.
+   *
+   * @param tmEvent das Ticketmaster-Event
+   */
   private void upsertEvent(TicketmasterEvent tmEvent) {
     Category category = findOrCreateCategory(tmEvent.segmentName());
     Location location = findOrCreateLocation(tmEvent);
@@ -106,6 +134,12 @@ public class TicketmasterIntegrationService {
     eventRepository.save(event);
   }
 
+  /**
+   * Findet die passende Loete-Kategorie für einen Ticketmaster-Segmentnamen.
+   *
+   * @param segmentName der Ticketmaster-Segmentname (z.B. "Music", "Sports")
+   * @return die zugehörige Kategorie
+   */
   private Category findOrCreateCategory(String segmentName) {
     String mapped = "Sonstiges";
     if (segmentName != null && !segmentName.isBlank()) {
@@ -114,6 +148,12 @@ public class TicketmasterIntegrationService {
     return categoryRepository.findByNameIgnoreCase(mapped).orElseThrow();
   }
 
+  /**
+   * Findet oder erstellt eine Location basierend auf den Ticketmaster-Eventdaten.
+   *
+   * @param tmEvent das Ticketmaster-Event mit Location-Informationen
+   * @return die gefundene oder neu erstellte Location
+   */
   private Location findOrCreateLocation(TicketmasterEvent tmEvent) {
     String venueName = tmEvent.venueName();
     String city = tmEvent.city();

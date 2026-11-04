@@ -1,3 +1,10 @@
+/**
+ * Startseite der Loete-Anwendung.
+ *
+ * Zeigt eine gefilterte, paginierte Event-Liste an. Unterstützt
+ * Kategorie-, Stadt- und Datumsfilter sowie semantische Vibe-Suche.
+ * Filter werden als URL-Query-Parameter synchronisiert.
+ */
 import { Component, inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { EventService } from "@/core/services/event.service";
@@ -166,24 +173,40 @@ import { LucideAngularModule, CalendarX2, AlertTriangle } from "lucide-angular";
   `,
 })
 export class Home implements OnInit {
+  /** Service für Event-Abfragen. */
   private eventService = inject(EventService);
+  /** Service für die Vibe-Suche. */
   private vibeSearchService = inject(VibeSearchService);
+  /** Service für Favoriten-Initialisierung. */
   private favoriteService = inject(FavoriteService);
+  /** Aktive Route für Query-Parameter. */
   private route = inject(ActivatedRoute);
+  /** Router für Query-Parameter-Synchronisation. */
   private router = inject(Router);
+  /** Service für SEO-Meta-Tags. */
   private seo = inject(SeoService);
 
+  /** Icon für den leeren Zustand (keine Events). */
   readonly CalendarX2Icon = CalendarX2;
+  /** Icon für Fehlermeldungen. */
   readonly AlertIcon = AlertTriangle;
 
+  /** Liste der angezeigten Events. */
   events = signal<Event[]>([]);
+  /** Ladezustand beim initialen Laden. */
   loading = signal(true);
+  /** Ladezustand beim Nachladen weiterer Events. */
   loadingMore = signal(false);
+  /** Ob die letzte Seite erreicht ist. */
   lastPage = signal(false);
+  /** Fehlermeldung bei Ladeproblemen. */
   error = signal<string | null>(null);
+  /** Initiale Filterwerte aus den URL-Query-Parametern. */
   initialFilters = signal<FilterValues | null>(null);
 
+  /** Aktuelle Seitennummer für die Paginierung. */
   private currentPage = 0;
+  /** Aktuelle Filterwerte. */
   private filters: FilterValues = {
     search: "",
     categoryId: null,
@@ -192,6 +215,7 @@ export class Home implements OnInit {
     dateTo: null,
   };
 
+  /** Initialisiert die Seite, liest URL-Filter und lädt Events. */
   ngOnInit(): void {
     this.seo.set(
       "Events entdecken",
@@ -212,6 +236,7 @@ export class Home implements OnInit {
     this.loadEvents();
   }
 
+  /** Reagiert auf Filteraenderungen aus der FilterBar. */
   onFiltersChange(values: FilterValues): void {
     this.filters = values;
     this.currentPage = 0;
@@ -219,10 +244,12 @@ export class Home implements OnInit {
     this.loadEvents();
   }
 
+  /** Prüft, ob aktuell eine Textsuche aktiv ist. */
   isSearchActive(): boolean {
     return !!this.filters.search;
   }
 
+  /** Lädt die nächste Seite an Events nach. */
   loadMore(): void {
     this.currentPage++;
     this.loadingMore.set(true);
@@ -238,11 +265,13 @@ export class Home implements OnInit {
       });
   }
 
+  /** Setzt die Paginierung zurück und lädt Events erneut. */
   reload(): void {
     this.currentPage = 0;
     this.loadEvents();
   }
 
+  /** Lädt Events via Browse oder Vibe-Suche je nach Filterung. */
   private loadEvents(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -254,6 +283,7 @@ export class Home implements OnInit {
     }
   }
 
+  /** Lädt paginierte Browse-Ergebnisse vom Event-Service. */
   private loadBrowseResults(): void {
     this.eventService
       .getEvents({ ...this.toApiFilter(), page: this.currentPage })
@@ -273,6 +303,7 @@ export class Home implements OnInit {
       });
   }
 
+  /** Lädt Vibe-Suchergebnisse vom VibeSearch-Service. */
   private loadVibeResults(): void {
     this.vibeSearchService
       .search({
@@ -300,6 +331,7 @@ export class Home implements OnInit {
       });
   }
 
+  /** Konvertiert die aktuellen Filter in ein API-kompatibles Format. */
   private toApiFilter(): EventFilter {
     return {
       search: this.filters.search || null,
@@ -312,6 +344,7 @@ export class Home implements OnInit {
     };
   }
 
+  /** Synchronisiert die aktuellen Filter als URL-Query-Parameter. */
   private syncQueryParams(): void {
     this.router.navigate([], {
       relativeTo: this.route,
