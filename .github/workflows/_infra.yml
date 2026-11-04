@@ -50,9 +50,9 @@ jobs:
       - name: Tofu plan
         if: inputs.mode == 'check' && github.event_name == 'pull_request'
         working-directory: infra
-        run: tofu plan -var-file=production.tfvars
+        run: tofu plan
 
       - name: Tofu apply
         if: inputs.mode == 'apply'
         working-directory: infra
-        run: tofu apply -auto-approve -var-file=production.tfvars
+        run: tofu apply -auto-approve

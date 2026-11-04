@@ -3,6 +3,7 @@ locals {
   placeholder_secrets = {
     "jwt-secret"           = "CHANGE_ME"
     "ticketmaster-api-key" = "CHANGE_ME"
+    "embeddings-api-key"   = "CHANGE_ME"
   }
 
   # Computed secrets — owned by Terraform.
