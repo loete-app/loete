@@ -31,8 +31,8 @@ export interface FilterValues {
           type="search"
           [(ngModel)]="search"
           (ngModelChange)="onSearchInput()"
-          placeholder="Eventname suchen..."
-          aria-label="Eventname suchen"
+          [placeholder]="searchPlaceholder()"
+          [attr.aria-label]="searchPlaceholder()"
         />
       </div>
 
@@ -170,6 +170,7 @@ export class FilterBar implements OnInit {
   private locationService = inject(LocationService);
 
   initial = input<FilterValues | null>(null);
+  searchPlaceholder = input<string>("Eventname suchen...");
   filtersChange = output<FilterValues>();
 
   categories = signal<Category[]>([]);

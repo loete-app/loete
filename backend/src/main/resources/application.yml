@@ -39,6 +39,15 @@ app:
   ticketmaster:
     api-key: ${TICKETMASTER_API_KEY:}
     base-url: https://app.ticketmaster.com/discovery/v2
+  embeddings:
+    base-url: ${EMBEDDINGS_BASE_URL:https://openrouter.ai/api/v1}
+    api-key: ${EMBEDDINGS_API_KEY:}
+    model: ${EMBEDDINGS_MODEL:openai/text-embedding-3-small}
+  vibe-search:
+    enabled: ${VIBE_SEARCH_ENABLED:true}
+    similarity-threshold: 0.65
+    embedding-batch-size: 50
+    default-limit: 20
 
 springdoc:
   swagger-ui:

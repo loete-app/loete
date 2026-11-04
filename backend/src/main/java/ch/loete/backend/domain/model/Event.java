@@ -63,6 +63,14 @@ public class Event {
   @Column(name = "source")
   private String source = "TICKETMASTER";
 
+  // The `embedding` vector(1536) column is intentionally unmapped — JPA/Hibernate
+  // has no native pgvector type support. It is managed via native SQL in EventRepository.
+  @Column(name = "embedding_input", columnDefinition = "TEXT")
+  private String embeddingInput;
+
+  @Column(name = "embedded_at")
+  private Instant embeddedAt;
+
   @CreationTimestamp
   @Column(name = "created_at")
   private Instant createdAt;
