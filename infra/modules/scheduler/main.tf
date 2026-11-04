@@ -7,6 +7,14 @@ resource "google_service_account" "scheduler" {
   display_name = "Cloud Scheduler invoker for Löte backend jobs"
 }
 
+# Cloud Scheduler requires the principal creating a job with an OIDC target to have
+# iam.serviceAccounts.actAs on the target SA. Grant it scoped to just this SA.
+resource "google_service_account_iam_member" "github_acts_as_scheduler" {
+  service_account_id = google_service_account.scheduler.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.github_sa_email}"
+}
+
 # Daily Ticketmaster sync — 03:00 Europe/Zurich.
 # attempt_deadline is short because the handler returns 202 immediately;
 # the actual work runs async in the backend on the jobExecutor.
