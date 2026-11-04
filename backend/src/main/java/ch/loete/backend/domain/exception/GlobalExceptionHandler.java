@@ -2,6 +2,8 @@ package ch.loete.backend.domain.exception;
 
 import ch.loete.backend.web.dto.response.ErrorResponse;
 import java.time.Instant;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
  * <p>Fängt alle Exceptions ab und wandelt sie in einheitliche {@link ErrorResponse}-Objekte mit
  * passenden HTTP-Statuscodes um.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -115,6 +118,22 @@ public class GlobalExceptionHandler {
   }
 
   /**
+   * Behandelt Verletzungen von DB-Constraints (z. B. doppelte E-Mail/Benutzername durch eine Race
+   * Condition) und gibt HTTP 409 zurück.
+   *
+   * @param ex die geworfene Exception
+   * @return die Fehlerantwort mit Status 409
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+    log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(
+            new ErrorResponse(
+                409, "Resource already exists or violates a constraint", Instant.now()));
+  }
+
+  /**
    * Fängt alle nicht anderweitig behandelten Exceptions ab und gibt HTTP 500 zurück.
    *
    * @param ex die geworfene Exception
@@ -122,6 +141,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+    log.error("Unhandled exception", ex);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(new ErrorResponse(500, "Internal server error", Instant.now()));
   }
