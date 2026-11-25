@@ -1,27 +1,36 @@
 package ch.loete.backend.web.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.loete.backend.config.JwtTokenProvider;
 import ch.loete.backend.domain.exception.ResourceNotFoundException;
+import ch.loete.backend.domain.model.User;
 import ch.loete.backend.domain.service.EventService;
 import ch.loete.backend.process.repository.UserRepository;
 import ch.loete.backend.testconfig.TestSecurityConfig;
+import ch.loete.backend.web.dto.request.CreateEventRequest;
 import ch.loete.backend.web.dto.request.EventFilterRequest;
 import ch.loete.backend.web.dto.response.EventDetailResponse;
 import ch.loete.backend.web.dto.response.EventResponse;
 import ch.loete.backend.web.dto.response.PagedResponse;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -121,5 +130,118 @@ class EventControllerTest {
         .thenThrow(new ResourceNotFoundException("Event", "nonexist"));
 
     mockMvc.perform(get("/events/nonexist")).andExpect(status().isNotFound());
+  }
+
+  private static final String START = "2099-07-01T18:00:00";
+  private static final String END = "2099-07-01T23:00:00";
+  private static final String TICKET_URL = "https://example.ch/sommerfest";
+
+  private static String createBody(String startDate, String endDate, String ticketUrl) {
+    return "{"
+        + "\"name\": \"Sommerfest\","
+        + "\"description\": \"Grillieren am See\","
+        + "\"imageUrl\": \"\","
+        + "\"ticketUrl\": \""
+        + ticketUrl
+        + "\","
+        + "\"startDate\": \""
+        + startDate
+        + "\","
+        + "\"endDate\": \""
+        + endDate
+        + "\","
+        + "\"categoryId\": 4,"
+        + "\"locationName\": \"Landiwiese\","
+        + "\"city\": \"Zürich\""
+        + "}";
+  }
+
+  @Test
+  void createEvent_returns201WithLocationHeader() throws Exception {
+    User user =
+        User.builder()
+            .id("usr00001")
+            .email(TestSecurityConfig.TEST_USER_EMAIL)
+            .username("tester")
+            .build();
+    when(userRepository.findByEmail(TestSecurityConfig.TEST_USER_EMAIL))
+        .thenReturn(Optional.of(user));
+
+    EventDetailResponse created =
+        new EventDetailResponse(
+            "new12345",
+            "Sommerfest",
+            "Grillieren am See",
+            null,
+            "https://example.ch/sommerfest",
+            LocalDateTime.of(2099, 7, 1, 18, 0),
+            LocalDateTime.of(2099, 7, 1, 23, 0),
+            "Festival",
+            "festival",
+            "Landiwiese",
+            "Zürich",
+            "CH",
+            null,
+            null,
+            false);
+    when(eventService.createEvent(any(CreateEventRequest.class), eq("usr00001")))
+        .thenReturn(created);
+    String body = createBody(START, END, TICKET_URL);
+
+    mockMvc
+        .perform(post("/events").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isCreated())
+        .andExpect(header().string("Location", containsString("/events/new12345")))
+        .andExpect(jsonPath("$.id").value("new12345"))
+        .andExpect(jsonPath("$.name").value("Sommerfest"));
+  }
+
+  @Test
+  void createEvent_returns400WhenRequiredFieldsMissing() throws Exception {
+    mockMvc
+        .perform(post("/events").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        .andExpect(status().isBadRequest());
+
+    verify(eventService, never()).createEvent(any(), any());
+  }
+
+  @Test
+  void createEvent_returns400WhenEndDateBeforeStartDate() throws Exception {
+    String body = createBody(START, "2099-07-01T17:00:00", TICKET_URL);
+
+    mockMvc
+        .perform(post("/events").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value(containsString("endDate")));
+
+    verify(eventService, never()).createEvent(any(), any());
+  }
+
+  @Test
+  void createEvent_returns400WhenStartDateInPast() throws Exception {
+    String body = createBody("2000-07-01T18:00:00", "2000-07-01T23:00:00", TICKET_URL);
+
+    mockMvc
+        .perform(post("/events").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createEvent_returns400ForInvalidUrl() throws Exception {
+    String body = createBody(START, END, "javascript:alert(1)");
+
+    mockMvc
+        .perform(post("/events").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createEvent_returns400ForMalformedJson() throws Exception {
+    mockMvc
+        .perform(
+            post("/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"startDate\": \"not-a-date\"}"))
+        .andExpect(status().isBadRequest());
   }
 }

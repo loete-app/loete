@@ -10,12 +10,19 @@ import { Favorites } from "./features/favorites/favorites";
 import { Login } from "./features/auth/login/login";
 import { Register } from "./features/auth/register/register";
 import { NotFound } from "./features/not-found/not-found";
+import { CreateEvent } from "./features/create-event/create-event";
+import { authGuard } from "./core/guards/auth.guard";
 
 /** Alle Routen der Anwendung. */
 export const routes: Routes = [
   { path: "", component: Home },
   { path: "login", component: Login },
   { path: "registrieren", component: Register },
+  {
+    path: "events/erstellen",
+    component: CreateEvent,
+    canActivate: [authGuard],
+  },
   { path: "events/:id", component: EventDetailPage },
   { path: "favoriten", component: Favorites },
   { path: "**", component: NotFound },

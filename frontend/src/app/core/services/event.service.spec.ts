@@ -6,7 +6,12 @@ import {
 } from "@angular/common/http/testing";
 import { EventService } from "./event.service";
 import { environment } from "../../../environments/environment";
-import { EventFilter, PagedResponse, Event } from "../models/event.model";
+import {
+  CreateEventRequest,
+  EventFilter,
+  PagedResponse,
+  Event,
+} from "../models/event.model";
 
 describe("EventService", () => {
   let service: EventService;
@@ -133,6 +138,31 @@ describe("EventService", () => {
       const req = httpTesting.expectOne(`${apiUrl}/abc123`);
       expect(req.request.method).toBe("GET");
       req.flush(mockDetail);
+    });
+  });
+
+  describe("createEvent", () => {
+    it("should make POST request with the request body", () => {
+      const request: CreateEventRequest = {
+        name: "Sommerfest",
+        description: null,
+        imageUrl: null,
+        ticketUrl: null,
+        startDate: "2026-07-01T18:00:00",
+        endDate: null,
+        categoryId: 4,
+        locationName: "Landiwiese",
+        city: "Zürich",
+      };
+
+      service.createEvent(request).subscribe((res) => {
+        expect(res.id).toBe("new123");
+      });
+
+      const req = httpTesting.expectOne(apiUrl);
+      expect(req.request.method).toBe("POST");
+      expect(req.request.body).toEqual(request);
+      req.flush({ id: "new123" });
     });
   });
 });

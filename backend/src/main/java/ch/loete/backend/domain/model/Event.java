@@ -23,7 +23,7 @@ import org.hibernate.annotations.UpdateTimestamp;
  *
  * <p>Repräsentiert ein Event mit Titel, Beschreibung, Datum, Kategorie, Veranstaltungsort und
  * optionalem Embedding für die semantische Suche. Events werden primaer aus der Ticketmaster-API
- * importiert.
+ * importiert, können aber auch von angemeldeten Benutzern erstellt werden.
  */
 @Data
 @Builder
@@ -76,7 +76,12 @@ public class Event {
   @JoinColumn(name = "location_id")
   private Location location;
 
-  /** Quelle des Events (z.B. "TICKETMASTER", "TESTDATA"). */
+  /** Benutzer, der das Event erstellt hat (nur bei Quelle "USER" gesetzt). */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "created_by")
+  private User createdBy;
+
+  /** Quelle des Events (z.B. "TICKETMASTER", "TESTDATA", "USER"). */
   @Builder.Default
   @Column(name = "source")
   private String source = "TICKETMASTER";

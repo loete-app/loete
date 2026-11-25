@@ -1,14 +1,15 @@
 /**
  * Service für den Zugriff auf Event-Daten.
  *
- * Stellt Methoden für die paginierte Event-Liste und die
- * Event-Detailansicht bereit.
+ * Stellt Methoden für die paginierte Event-Liste, die
+ * Event-Detailansicht und das Erstellen eigener Events bereit.
  */
 import { Injectable, inject } from "@angular/core";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { environment } from "../../../environments/environment";
 import {
+  CreateEventRequest,
   Event,
   EventDetail,
   EventFilter,
@@ -52,5 +53,15 @@ export class EventService {
    */
   getEvent(id: string): Observable<EventDetail> {
     return this.http.get<EventDetail>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Erstellt ein neues Event im Namen des eingeloggten Benutzers.
+   *
+   * @param request die Event-Daten
+   * @returns Observable mit den Details des erstellten Events
+   */
+  createEvent(request: CreateEventRequest): Observable<EventDetail> {
+    return this.http.post<EventDetail>(this.apiUrl, request);
   }
 }
