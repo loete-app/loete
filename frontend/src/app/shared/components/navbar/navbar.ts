@@ -1,13 +1,14 @@
 /**
  * Navigationsleiste der Anwendung.
  *
- * Zeigt die Hauptnavigation mit Links zu Events und Favoriten,
+ * Zeigt die Hauptnavigation mit Links zu Events, Favoriten und
+ * zum Erstellen eigener Events,
  * sowie den Authentifizierungsstatus (Login/Registrieren oder
  * Benutzername/Abmelden) an.
  */
 import { Component, inject } from "@angular/core";
 import { RouterLink, RouterLinkActive } from "@angular/router";
-import { LucideAngularModule, Heart } from "lucide-angular";
+import { LucideAngularModule, Heart, Plus } from "lucide-angular";
 import { AuthService } from "@/core/services/auth.service";
 
 @Component({
@@ -29,6 +30,14 @@ import { AuthService } from "@/core/services/auth.service";
           Favoriten
         </a>
       </div>
+      <a
+        routerLink="/events/erstellen"
+        class="create-link"
+        aria-label="Event erstellen"
+      >
+        <i-lucide [img]="PlusIcon" [size]="14" />
+        <span class="create-label">Event erstellen</span>
+      </a>
       <div class="auth">
         @if (currentUser(); as user) {
           <span class="username">{{ user.username }}</span>
@@ -77,6 +86,31 @@ import { AuthService } from "@/core/services/auth.service";
     .links a:hover,
     .links a.active {
       color: var(--foreground);
+    }
+    .create-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      color: var(--primary);
+      border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+      border-radius: var(--radius);
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      white-space: nowrap;
+      text-decoration: none;
+      transition:
+        background 0.15s,
+        border-color 0.15s;
+    }
+    @media (max-width: 640px) {
+      .create-label {
+        display: none;
+      }
+    }
+    .create-link:hover {
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      border-color: var(--primary);
     }
     .auth {
       display: flex;
@@ -132,6 +166,8 @@ export class Navbar {
   private authService = inject(AuthService);
   /** Herz-Icon für den Favoriten-Link. */
   readonly HeartIcon = Heart;
+  /** Plus-Icon für den Link zum Erstellen eines Events. */
+  readonly PlusIcon = Plus;
   /** Signal mit dem aktuell eingeloggten Benutzer. */
   readonly currentUser = this.authService.currentUser;
 

@@ -2,26 +2,35 @@ package ch.loete.backend.web.controller;
 
 import ch.loete.backend.domain.service.EventService;
 import ch.loete.backend.process.repository.UserRepository;
+import ch.loete.backend.web.dto.request.CreateEventRequest;
 import ch.loete.backend.web.dto.request.EventFilterRequest;
 import ch.loete.backend.web.dto.response.EventDetailResponse;
 import ch.loete.backend.web.dto.response.EventResponse;
 import ch.loete.backend.web.dto.response.PagedResponse;
+import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
  * REST-Controller für Event-Endpunkte.
  *
  * <p>Stellt öffentliche GET-Endpunkte für die paginierte Event-Liste (mit Filterung) und die
- * Event-Detailansicht bereit.
+ * Event-Detailansicht bereit, sowie einen authentifizierten POST-Endpunkt zum Erstellen eigener
+ * Events.
  */
 @RestController
 @RequestMapping("/events")
@@ -79,5 +88,42 @@ public class EventController {
       userId = userRepository.findByEmail(auth.getName()).map(user -> user.getId()).orElse(null);
     }
     return ResponseEntity.ok(eventService.getEvent(id, userId));
+  }
+
+  /**
+   * Erstellt ein neues Event im Namen des authentifizierten Benutzers.
+   *
+   * @param request die Event-Daten
+   * @param auth das Authentication-Objekt
+   * @return HTTP 201 mit der Detailansicht des erstellten Events
+   */
+  @PostMapping
+  public ResponseEntity<EventDetailResponse> createEvent(
+      @Valid @RequestBody CreateEventRequest request, Authentication auth) {
+    String userId = getCurrentUserId(auth);
+    EventDetailResponse created = eventService.createEvent(request, userId);
+    URI location =
+        ServletUriComponentsBuilder.fromCurrentRequest()
+            .path("/{id}")
+            .buildAndExpand(created.id())
+            .toUri();
+    return ResponseEntity.created(location).body(created);
+  }
+
+  /**
+   * Ermittelt die Benutzer-ID des authentifizierten Benutzers.
+   *
+   * @param auth das Authentication-Objekt
+   * @return die Benutzer-ID
+   * @throws ResponseStatusException wenn kein Benutzer angemeldet ist oder er nicht existiert
+   */
+  private String getCurrentUserId(Authentication auth) {
+    if (auth == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+    }
+    return userRepository
+        .findByEmail(auth.getName())
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"))
+        .getId();
   }
 }

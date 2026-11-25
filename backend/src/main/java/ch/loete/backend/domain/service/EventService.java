@@ -1,9 +1,16 @@
 package ch.loete.backend.domain.service;
 
 import ch.loete.backend.domain.exception.ResourceNotFoundException;
+import ch.loete.backend.domain.model.Category;
 import ch.loete.backend.domain.model.Event;
+import ch.loete.backend.domain.model.Location;
+import ch.loete.backend.domain.model.User;
+import ch.loete.backend.process.repository.CategoryRepository;
 import ch.loete.backend.process.repository.EventRepository;
 import ch.loete.backend.process.repository.FavoriteRepository;
+import ch.loete.backend.process.repository.LocationRepository;
+import ch.loete.backend.process.repository.UserRepository;
+import ch.loete.backend.web.dto.request.CreateEventRequest;
 import ch.loete.backend.web.dto.request.EventFilterRequest;
 import ch.loete.backend.web.dto.response.EventDetailResponse;
 import ch.loete.backend.web.dto.response.EventResponse;
@@ -23,18 +30,30 @@ import org.springframework.transaction.annotation.Transactional;
  * Service für Event-bezogene Geschaeftslogik.
  *
  * <p>Stellt paginierte Event-Listen mit Filterung (Kategorie, Stadt, Datum, Textsuche) sowie die
- * Detailansicht einzelner Events bereit. Prüft bei authentifizierten Benutzern den
- * Favoriten-Status.
+ * Detailansicht einzelner Events bereit. Prüft bei authentifizierten Benutzern den Favoriten-Status
+ * und ermöglicht angemeldeten Benutzern das Erstellen eigener Events.
  */
 @Service
 @RequiredArgsConstructor
 public class EventService {
+
+  /** Quelle für von Benutzern erstellte Events. */
+  public static final String SOURCE_USER = "USER";
 
   /** Repository für den Zugriff auf Event-Daten. */
   private final EventRepository eventRepository;
 
   /** Repository für die Favoriten-Abfrage (Favoritenstatus). */
   private final FavoriteRepository favoriteRepository;
+
+  /** Repository für die Aufloesung der Kategorie beim Erstellen eines Events. */
+  private final CategoryRepository categoryRepository;
+
+  /** Repository für das Finden bzw. Anlegen des Veranstaltungsortes. */
+  private final LocationRepository locationRepository;
+
+  /** Repository für die Aufloesung des erstellenden Benutzers. */
+  private final UserRepository userRepository;
 
   /**
    * Gibt eine paginierte, gefilterte Liste von Events zurück.
@@ -87,6 +106,69 @@ public class EventService {
     boolean favorited = userId != null && favoriteRepository.existsByUser_IdAndEvent_Id(userId, id);
 
     return toEventDetailResponse(event, favorited);
+  }
+
+  /**
+   * Erstellt ein neues Event im Namen eines Benutzers.
+   *
+   * <p>Der Veranstaltungsort wird anhand von Name und Stadt wiederverwendet oder neu angelegt. Das
+   * Embedding für die semantische Suche wird vom regulären Embedding-Job nachträglich erzeugt.
+   *
+   * @param request die Event-Daten
+   * @param userId die ID des erstellenden Benutzers
+   * @return die Detailansicht des erstellten Events
+   * @throws ResourceNotFoundException wenn Benutzer oder Kategorie nicht existieren
+   */
+  @Transactional
+  public EventDetailResponse createEvent(CreateEventRequest request, String userId) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+    Long categoryId = request.categoryId();
+    Category category =
+        categoryRepository
+            .findById(categoryId)
+            .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId.toString()));
+
+    String locationName = request.locationName().trim();
+    String city = request.city().trim();
+    Location location =
+        locationRepository
+            .findByNameAndCity(locationName, city)
+            .orElseGet(
+                () ->
+                    locationRepository.save(
+                        Location.builder().name(locationName).city(city).build()));
+
+    Event event =
+        Event.builder()
+            .name(request.name().trim())
+            .description(blankToNull(request.description()))
+            .imageUrl(blankToNull(request.imageUrl()))
+            .ticketUrl(blankToNull(request.ticketUrl()))
+            .startDate(request.startDate())
+            .endDate(request.endDate())
+            .category(category)
+            .location(location)
+            .createdBy(user)
+            .source(SOURCE_USER)
+            .build();
+
+    return toEventDetailResponse(eventRepository.save(event), false);
+  }
+
+  /**
+   * Trimmt einen optionalen Text und wandelt leere Werte in {@code null} um.
+   *
+   * @param value der Eingabewert
+   * @return der getrimmte Wert oder {@code null}
+   */
+  private static String blankToNull(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    return value.trim();
   }
 
   /**

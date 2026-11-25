@@ -87,3 +87,25 @@ export interface EventFilter {
   /** Suchbegriff für den Event-Namen. */
   search?: string | null;
 }
+
+/** Daten für das Erstellen eines eigenen Events. */
+export interface CreateEventRequest {
+  /** Name des Events. */
+  name: string;
+  /** Optionale Beschreibung. */
+  description: string | null;
+  /** Optionale URL des Vorschaubildes. */
+  imageUrl: string | null;
+  /** Optionale URL zur Ticket- oder Infoseite. */
+  ticketUrl: string | null;
+  /** Startdatum und -uhrzeit als lokaler ISO-String (ohne Zeitzone). */
+  startDate: string;
+  /** Optionales Enddatum als lokaler ISO-String (ohne Zeitzone). */
+  endDate: string | null;
+  /** ID der Kategorie. */
+  categoryId: number;
+  /** Name des Veranstaltungsortes. */
+  locationName: string;
+  /** Stadt des Veranstaltungsortes. */
+  city: string;
+}

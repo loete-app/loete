@@ -46,6 +46,13 @@ describe("Navbar", () => {
     expect(eventsLink.textContent?.trim()).toContain("Events");
   });
 
+  it("should render the create-event link", () => {
+    const createLink = element.querySelector(".create-link");
+    expect(createLink).toBeTruthy();
+    expect(createLink!.getAttribute("href")).toBe("/events/erstellen");
+    expect(createLink!.textContent?.trim()).toContain("Event erstellen");
+  });
+
   it("should show login/register links when not authenticated", () => {
     const authLink = element.querySelector(".auth-link");
     const registerLink = element.querySelector(".register-link");

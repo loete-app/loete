@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -102,6 +103,19 @@ public class GlobalExceptionHandler {
             .reduce((a, b) -> a + "; " + b)
             .orElse("Validation failed");
     return ResponseEntity.badRequest().body(new ErrorResponse(400, message, Instant.now()));
+  }
+
+  /**
+   * Behandelt nicht lesbare Request-Bodies (z. B. ungültiges JSON oder Datumsformat) und gibt HTTP
+   * 400 zurück.
+   *
+   * @param ex die geworfene Exception
+   * @return die Fehlerantwort mit Status 400
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException ex) {
+    return ResponseEntity.badRequest()
+        .body(new ErrorResponse(400, "Malformed request body", Instant.now()));
   }
 
   /**

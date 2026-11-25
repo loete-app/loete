@@ -5,13 +5,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import ch.loete.backend.domain.exception.ResourceNotFoundException;
 import ch.loete.backend.domain.model.Category;
 import ch.loete.backend.domain.model.Event;
 import ch.loete.backend.domain.model.Location;
+import ch.loete.backend.domain.model.User;
+import ch.loete.backend.process.repository.CategoryRepository;
 import ch.loete.backend.process.repository.EventRepository;
 import ch.loete.backend.process.repository.FavoriteRepository;
+import ch.loete.backend.process.repository.LocationRepository;
+import ch.loete.backend.process.repository.UserRepository;
+import ch.loete.backend.web.dto.request.CreateEventRequest;
 import ch.loete.backend.web.dto.request.EventFilterRequest;
 import ch.loete.backend.web.dto.response.EventDetailResponse;
 import ch.loete.backend.web.dto.response.EventResponse;
@@ -21,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -36,6 +44,12 @@ class EventServiceTest {
   @Mock private EventRepository eventRepository;
 
   @Mock private FavoriteRepository favoriteRepository;
+
+  @Mock private CategoryRepository categoryRepository;
+
+  @Mock private LocationRepository locationRepository;
+
+  @Mock private UserRepository userRepository;
 
   @InjectMocks private EventService eventService;
 
@@ -202,5 +216,93 @@ class EventServiceTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Event")
         .hasMessageContaining("missing");
+  }
+
+  private static CreateEventRequest createRequest() {
+    return new CreateEventRequest(
+        "  Sommerfest  ",
+        "  ",
+        "",
+        "https://example.ch/sommerfest",
+        LocalDateTime.of(2099, 7, 1, 18, 0),
+        null,
+        4L,
+        " Landiwiese ",
+        "Zürich");
+  }
+
+  @Test
+  void createEvent_createsNewLocationAndSetsCreator() {
+    User user = User.builder().id("usr00001").email("a@b.ch").username("tester").build();
+    Category festival = Category.builder().id(4L).name("Festival").slug("festival").build();
+    given(userRepository.findById("usr00001")).willReturn(Optional.of(user));
+    given(categoryRepository.findById(4L)).willReturn(Optional.of(festival));
+    given(locationRepository.findByNameAndCity("Landiwiese", "Zürich"))
+        .willReturn(Optional.empty());
+    given(locationRepository.save(any(Location.class)))
+        .willAnswer(
+            inv -> {
+              Location l = inv.getArgument(0);
+              l.setId(9L);
+              return l;
+            });
+    given(eventRepository.save(any(Event.class)))
+        .willAnswer(
+            inv -> {
+              Event e = inv.getArgument(0);
+              e.setId("new12345");
+              return e;
+            });
+
+    EventDetailResponse result = eventService.createEvent(createRequest(), "usr00001");
+
+    ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+    verify(eventRepository).save(captor.capture());
+    Event saved = captor.getValue();
+    assertThat(saved.getName()).isEqualTo("Sommerfest");
+    assertThat(saved.getDescription()).isNull();
+    assertThat(saved.getImageUrl()).isNull();
+    assertThat(saved.getTicketUrl()).isEqualTo("https://example.ch/sommerfest");
+    assertThat(saved.getSource()).isEqualTo(EventService.SOURCE_USER);
+    assertThat(saved.getCreatedBy()).isEqualTo(user);
+    assertThat(saved.getExternalId()).isNull();
+    assertThat(saved.getLocation().getName()).isEqualTo("Landiwiese");
+    assertThat(saved.getLocation().getCountry()).isEqualTo("CH");
+
+    assertThat(result.id()).isEqualTo("new12345");
+    assertThat(result.categoryName()).isEqualTo("Festival");
+    assertThat(result.locationName()).isEqualTo("Landiwiese");
+    assertThat(result.city()).isEqualTo("Zürich");
+    assertThat(result.favorited()).isFalse();
+  }
+
+  @Test
+  void createEvent_reusesExistingLocation() {
+    User user = User.builder().id("usr00001").build();
+    Category festival = Category.builder().id(4L).name("Festival").slug("festival").build();
+    Location existing = Location.builder().id(3L).name("Landiwiese").city("Zürich").build();
+    given(userRepository.findById("usr00001")).willReturn(Optional.of(user));
+    given(categoryRepository.findById(4L)).willReturn(Optional.of(festival));
+    given(locationRepository.findByNameAndCity("Landiwiese", "Zürich"))
+        .willReturn(Optional.of(existing));
+    given(eventRepository.save(any(Event.class))).willAnswer(inv -> inv.getArgument(0));
+
+    eventService.createEvent(createRequest(), "usr00001");
+
+    verify(locationRepository, never()).save(any());
+    ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+    verify(eventRepository).save(captor.capture());
+    assertThat(captor.getValue().getLocation()).isSameAs(existing);
+  }
+
+  @Test
+  void createEvent_throwsWhenCategoryNotFound() {
+    given(userRepository.findById("usr00001"))
+        .willReturn(Optional.of(User.builder().id("usr00001").build()));
+    given(categoryRepository.findById(4L)).willReturn(Optional.empty());
+
+    assertThatThrownBy(() -> eventService.createEvent(createRequest(), "usr00001"))
+        .isInstanceOf(ResourceNotFoundException.class);
+    verify(eventRepository, never()).save(any());
   }
 }
