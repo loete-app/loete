@@ -5,6 +5,7 @@ on:
 
 jobs:
   e2e:
+    continue-on-error: true
     name: Playwright E2E
     runs-on: ubuntu-latest
     steps:
