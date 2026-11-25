@@ -54,6 +54,8 @@ import {
           <h3>Noch keine Favoriten</h3>
           <p>
             Markiere Events mit dem Herz-Symbol, um sie hier wiederzufinden.
+            Dies ermöglicht dir, deine Lieblingsveranstaltungen schnell zu
+            speichern und später wieder aufzurufen.
           </p>
           <a routerLink="/" class="cta">Events entdecken</a>
         </div>
@@ -89,7 +91,7 @@ import {
                 class="remove"
                 [disabled]="removingId() === fav.eventId"
                 (click)="remove(fav.eventId)"
-                aria-label="Aus Favoriten entfernen"
+                aria-label="Favorit entfernen"
               >
                 <i-lucide [img]="TrashIcon" [size]="16" />
               </button>
