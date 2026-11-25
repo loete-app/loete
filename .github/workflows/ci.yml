@@ -55,7 +55,6 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       region: europe-west1
-      ar_repo: loete
       backend_service: loete-backend
     secrets: inherit
 
