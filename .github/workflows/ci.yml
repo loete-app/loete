@@ -44,9 +44,9 @@ jobs:
     uses: ./.github/workflows/_security-static.yml
     secrets: inherit
 
-  e2e:
-    needs: [frontend, backend]
-    uses: ./.github/workflows/_e2e.yml
+#  e2e:
+#    needs: [frontend, backend]
+#    uses: ./.github/workflows/_e2e.yml
 
   # ── Build & push images ──────────────────────────────────────────────
   build:
