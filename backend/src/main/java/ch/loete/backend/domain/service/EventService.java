@@ -30,8 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Service für Event-bezogene Geschaeftslogik.
  *
  * <p>Stellt paginierte Event-Listen mit Filterung (Kategorie, Stadt, Datum, Textsuche) sowie die
- * Detailansicht einzelner Events bereit. Prüft bei authentifizierten Benutzern den
- * Favoriten-Status und ermöglicht angemeldeten Benutzern das Erstellen eigener Events.
+ * Detailansicht einzelner Events bereit. Prüft bei authentifizierten Benutzern den Favoriten-Status
+ * und ermöglicht angemeldeten Benutzern das Erstellen eigener Events.
  */
 @Service
 @RequiredArgsConstructor
